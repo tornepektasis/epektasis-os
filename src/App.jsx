@@ -102,12 +102,13 @@ const SectionLabel = ({ children }) => (
   </div>
 );
 
-const RichTextEditor = ({ content, onChange, onShowMessage }) => {
+const RichTextEditor = ({ content, onChange, onShowMessage, accessToken }) => {
   const editorRef = useRef(null);
   const savedRange = useRef(null);
   
   const [selectedImage, setSelectedImage] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const recognitionRef = useRef(null);
 
   useEffect(() => {
@@ -149,9 +150,12 @@ const RichTextEditor = ({ content, onChange, onShowMessage }) => {
     onChange(editorRef.current?.innerHTML || '');
   };
 
-  const handleImage = (e) => {
+  const handleImage = async (e) => {
     const file = e.target.files[0];
-    if (file) {
+    if (!file) return;
+
+    if (!accessToken) {
+      // Fallback: Save locally if cloud is not connected yet
       const reader = new FileReader();
       reader.onload = (event) => {
         restoreSelection();
@@ -159,7 +163,52 @@ const RichTextEditor = ({ content, onChange, onShowMessage }) => {
         onChange(editorRef.current?.innerHTML || '');
       };
       reader.readAsDataURL(file);
+      e.target.value = ''; 
+      return;
     }
+
+    // Cloud Mode: Upload directly to Google Drive as a standalone file!
+    setIsUploading(true);
+    try {
+      const metadata = { name: `epektasis_media_${Date.now()}`, mimeType: file.type };
+      const form = new FormData();
+      form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+      form.append('file', file);
+
+      const uploadRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+        method: 'POST',
+        headers: new Headers({ 'Authorization': 'Bearer ' + accessToken }),
+        body: form,
+      });
+      
+      if (!uploadRes.ok) throw new Error('Upload failed');
+      const fileData = await uploadRes.json();
+      const fileId = fileData.id;
+
+      // Make the image accessible so it renders inside the app visually
+      await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + accessToken,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ role: 'reader', type: 'anyone' })
+      });
+
+      // Insert the tiny cloud link instead of the heavy local file
+      const imgUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+      
+      restoreSelection();
+      document.execCommand('insertImage', false, imgUrl);
+      onChange(editorRef.current?.innerHTML || '');
+      
+    } catch (err) {
+      console.error(err);
+      onShowMessage?.('Failed to upload image to Google Drive. Check your connection.');
+    } finally {
+      setIsUploading(false);
+    }
+    
     e.target.value = ''; 
   };
 
@@ -318,10 +367,11 @@ const RichTextEditor = ({ content, onChange, onShowMessage }) => {
             <div className="w-px h-4 bg-zinc-300 mx-1" />
             <label 
               onMouseDown={(e) => e.preventDefault()}
-              className="p-1.5 text-zinc-500 hover:bg-zinc-200 hover:text-zinc-900 rounded transition-colors cursor-pointer" title="Insert Image"
+              className={`p-1.5 rounded transition-colors ${isUploading ? 'text-[color:var(--theme-accent)] animate-pulse' : 'text-zinc-500 hover:bg-zinc-200 hover:text-zinc-900 cursor-pointer'}`} 
+              title={isUploading ? "Uploading to Cloud..." : "Insert Image"}
             >
-              <ImagePlus size={16} />
-              <input type="file" accept="image/*" onChange={handleImage} className="hidden" />
+              {isUploading ? <Cloud size={16} /> : <ImagePlus size={16} />}
+              <input type="file" accept="image/*" onChange={handleImage} className="hidden" disabled={isUploading} />
             </label>
             <button
               onMouseDown={(e) => e.preventDefault()}
@@ -1036,6 +1086,7 @@ const App = () => {
                   </div>
                   <RichTextEditor 
                     content={selectedTemplate.content}
+                    accessToken={accessToken}
                     onChange={(html) => {
                       const updated = templates.map(t => t.id === selectedTemplate.id ? { ...t, content: html } : t);
                       setTemplates(updated);
@@ -1364,7 +1415,7 @@ const App = () => {
                       </div>
                     </div>
                   </div>
-                  <RichTextEditor content={selectedEntry.content} onChange={(html) => { const updated = entries.map(ent => ent.id === selectedEntry.id ? { ...ent, content: html } : ent); setEntries(updated); }} onShowMessage={(msg) => setModalConfig({ type: 'alert', title: 'Notice', message: msg, confirmText: 'Got it' })} />
+                  <RichTextEditor content={selectedEntry.content} accessToken={accessToken} onChange={(html) => { const updated = entries.map(ent => ent.id === selectedEntry.id ? { ...ent, content: html } : ent); setEntries(updated); }} onShowMessage={(msg) => setModalConfig({ type: 'alert', title: 'Notice', message: msg, confirmText: 'Got it' })} />
                 </div>
               ) : (
                 <div className="max-w-2xl w-full h-full flex flex-col items-center justify-center text-zinc-400 animate-in fade-in duration-500"><Book size={48} className="mb-4 opacity-20" /><p>No entry selected in {activeJournal?.name || 'Journal'}.</p><button onClick={handleCreateEntry} className="mt-6 px-6 py-2.5 bg-[color:var(--theme-primary)] hover:bg-primary-dark transition-colors text-[color:var(--theme-secondary)] rounded-full text-sm font-bold flex items-center gap-2 shadow-lg"><Plus size={16} /> Create New Entry</button></div>
