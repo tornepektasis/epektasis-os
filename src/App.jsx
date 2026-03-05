@@ -150,24 +150,19 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken }) => {
     onChange(editorRef.current?.innerHTML || '');
   };
 
-  const handleImage = async (e) => {
+ const handleImage = async (e) => {
     const file = e.target.files[0];
+    const inputTarget = e.target; // Save reference to prevent React crashing
     if (!file) return;
 
     if (!accessToken) {
-      // Fallback: Save locally if cloud is not connected yet
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        restoreSelection();
-        document.execCommand('insertImage', false, event.target.result);
-        onChange(editorRef.current?.innerHTML || '');
-      };
-      reader.readAsDataURL(file);
-      e.target.value = ''; 
+      // STOP THE CRASH: If not connected to cloud, stop the huge file from loading.
+      onShowMessage?.('Cloud Upload Required: Please go to Settings and click "Connect to Drive" first. This prevents large photos from crashing your phone.');
+      inputTarget.value = ''; 
       return;
     }
 
-    // Cloud Mode: Upload directly to Google Drive as a standalone file!
+    // Cloud Mode: Upload directly to Google Drive as a standalone file
     setIsUploading(true);
     try {
       const metadata = { name: `epektasis_media_${Date.now()}`, mimeType: file.type };
@@ -207,9 +202,8 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken }) => {
       onShowMessage?.('Failed to upload image to Google Drive. Check your connection.');
     } finally {
       setIsUploading(false);
+      inputTarget.value = ''; // Clean up the input safely
     }
-    
-    e.target.value = ''; 
   };
 
   const handleEditorClick = (e) => {
