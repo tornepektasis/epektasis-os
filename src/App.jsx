@@ -190,8 +190,8 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken }) => {
         body: JSON.stringify({ role: 'reader', type: 'anyone' })
       });
 
-      // Insert the tiny cloud link instead of the heavy local file
-      const imgUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+      // THE FIX: Use Google's special direct-image URL instead of the standard Drive link
+      const imgUrl = `https://lh3.googleusercontent.com/d/${fileId}`;
       
       restoreSelection();
       document.execCommand('insertImage', false, imgUrl);
