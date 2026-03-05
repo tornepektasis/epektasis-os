@@ -102,7 +102,7 @@ const SectionLabel = ({ children }) => (
   </div>
 );
 
-const RichTextEditor = ({ content, onChange, onShowMessage, accessToken }) => {
+const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderId }) => {
   const editorRef = useRef(null);
   const savedRange = useRef(null);
   
@@ -150,22 +150,24 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken }) => {
     onChange(editorRef.current?.innerHTML || '');
   };
 
- const handleImage = async (e) => {
+  const handleImage = async (e) => {
     const file = e.target.files[0];
-    const inputTarget = e.target; // Save reference to prevent React crashing
+    const inputTarget = e.target;
     if (!file) return;
 
     if (!accessToken) {
-      // STOP THE CRASH: If not connected to cloud, stop the huge file from loading.
-      onShowMessage?.('Cloud Upload Required: Please go to Settings and click "Connect to Drive" first. This prevents large photos from crashing your phone.');
+      onShowMessage?.('Cloud Upload Required: Please go to Settings and click "Connect to Drive" first.');
       inputTarget.value = ''; 
       return;
     }
 
-    // Cloud Mode: Upload directly to Google Drive as a standalone file
     setIsUploading(true);
     try {
       const metadata = { name: `epektasis_media_${Date.now()}`, mimeType: file.type };
+      if (folderId) {
+        metadata.parents = [folderId]; // Save to specific Google Drive Folder!
+      }
+      
       const form = new FormData();
       form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
       form.append('file', file);
@@ -180,7 +182,6 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken }) => {
       const fileData = await uploadRes.json();
       const fileId = fileData.id;
 
-      // Make the image accessible so it renders inside the app visually
       await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, {
         method: 'POST',
         headers: {
@@ -190,7 +191,6 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken }) => {
         body: JSON.stringify({ role: 'reader', type: 'anyone' })
       });
 
-      // THE FIX: Use Google's special direct-image URL instead of the standard Drive link
       const imgUrl = `https://lh3.googleusercontent.com/d/${fileId}`;
       
       restoreSelection();
@@ -199,10 +199,10 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken }) => {
       
     } catch (err) {
       console.error(err);
-      onShowMessage?.('Failed to upload image to Google Drive. Check your connection.');
+      onShowMessage?.('Failed to upload image to Google Drive.');
     } finally {
       setIsUploading(false);
-      inputTarget.value = ''; // Clean up the input safely
+      inputTarget.value = ''; 
     }
   };
 
@@ -461,6 +461,7 @@ const App = () => {
   const [accessToken, setAccessToken] = useState(null);
   const [isDriveConnected, setIsDriveConnected] = useState(false);
   const [driveFileId, setDriveFileId] = useState(() => localStorage.getItem('epektasis_fileId') || null);
+  const [driveFolderId, setDriveFolderId] = useState(() => localStorage.getItem('epektasis_folderId') || null);
   const [lastSynced, setLastSynced] = useState(() => localStorage.getItem('epektasis_lastSync') || null);
   
   // Mobile Navigation State
@@ -508,6 +509,7 @@ const App = () => {
   useEffect(() => { localStorage.setItem('epektasis_theme', JSON.stringify(themeConfig)); }, [themeConfig]);
   useEffect(() => { localStorage.setItem('epektasis_gclient', googleClientId); }, [googleClientId]);
   useEffect(() => { if (driveFileId) localStorage.setItem('epektasis_fileId', driveFileId); }, [driveFileId]);
+  useEffect(() => { if (driveFolderId) localStorage.setItem('epektasis_folderId', driveFolderId); }, [driveFolderId]);
   useEffect(() => { if (lastSynced) localStorage.setItem('epektasis_lastSync', lastSynced); }, [lastSynced]);
 
   // AUTO-SYNC (Debounced 3s)
@@ -698,6 +700,29 @@ const App = () => {
   const findOrCreateDriveFile = async (token) => {
     window.gapi.client.setToken({ access_token: token });
     try {
+      // 1. Locate or Create "Epektasis Vault" Folder
+      let folderId = driveFolderId;
+      const folderRes = await window.gapi.client.drive.files.list({
+        q: "mimeType='application/vnd.google-apps.folder' and name='Epektasis Vault' and trashed=false",
+        spaces: 'drive',
+        fields: 'files(id, name)'
+      });
+      
+      const folders = folderRes.result.files;
+      if (folders && folders.length > 0) {
+        folderId = folders[0].id;
+      } else {
+        const createFolderRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: 'Epektasis Vault', mimeType: 'application/vnd.google-apps.folder' })
+        });
+        const newFolder = await createFolderRes.json();
+        folderId = newFolder.id;
+      }
+      setDriveFolderId(folderId);
+
+      // 2. Locate or Create Main JSON Data File
       const response = await window.gapi.client.drive.files.list({
         q: "name='epektasis_vault.json' and trashed=false",
         spaces: 'drive',
@@ -710,7 +735,7 @@ const App = () => {
         setDriveFileId(fileId);
         await pullFromDrive(fileId, token);
       } else {
-        const metadata = { name: 'epektasis_vault.json', mimeType: 'application/json' };
+        const metadata = { name: 'epektasis_vault.json', mimeType: 'application/json', parents: [folderId] };
         const data = JSON.stringify({ entries, journals, templates, themeConfig });
         
         const file = new Blob([data], { type: 'application/json' });
@@ -727,7 +752,7 @@ const App = () => {
         const createData = await createRes.json();
         setDriveFileId(createData.id);
         setLastSynced(new Date().toLocaleTimeString());
-        setModalConfig({ type: 'alert', title: 'Cloud Sync Ready', message: 'Successfully created a secure Epektasis Vault in your Google Drive. Your local entries have been backed up.', confirmText: 'Awesome' });
+        setModalConfig({ type: 'alert', title: 'Cloud Sync Ready', message: 'Successfully created a secure Epektasis Vault folder in your Google Drive. Your entries have been backed up.', confirmText: 'Awesome' });
       }
     } catch (err) {
       console.error(err);
@@ -1081,6 +1106,7 @@ const App = () => {
                   <RichTextEditor 
                     content={selectedTemplate.content}
                     accessToken={accessToken}
+                    folderId={driveFolderId}
                     onChange={(html) => {
                       const updated = templates.map(t => t.id === selectedTemplate.id ? { ...t, content: html } : t);
                       setTemplates(updated);
@@ -1409,7 +1435,7 @@ const App = () => {
                       </div>
                     </div>
                   </div>
-                  <RichTextEditor content={selectedEntry.content} accessToken={accessToken} onChange={(html) => { const updated = entries.map(ent => ent.id === selectedEntry.id ? { ...ent, content: html } : ent); setEntries(updated); }} onShowMessage={(msg) => setModalConfig({ type: 'alert', title: 'Notice', message: msg, confirmText: 'Got it' })} />
+                  <RichTextEditor content={selectedEntry.content} accessToken={accessToken} folderId={driveFolderId} onChange={(html) => { const updated = entries.map(ent => ent.id === selectedEntry.id ? { ...ent, content: html } : ent); setEntries(updated); }} onShowMessage={(msg) => setModalConfig({ type: 'alert', title: 'Notice', message: msg, confirmText: 'Got it' })} />
                 </div>
               ) : (
                 <div className="max-w-2xl w-full h-full flex flex-col items-center justify-center text-zinc-400 animate-in fade-in duration-500"><Book size={48} className="mb-4 opacity-20" /><p>No entry selected in {activeJournal?.name || 'Journal'}.</p><button onClick={handleCreateEntry} className="mt-6 px-6 py-2.5 bg-[color:var(--theme-primary)] hover:bg-primary-dark transition-colors text-[color:var(--theme-secondary)] rounded-full text-sm font-bold flex items-center gap-2 shadow-lg"><Plus size={16} /> Create New Entry</button></div>
