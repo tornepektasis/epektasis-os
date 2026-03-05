@@ -419,6 +419,7 @@ const App = () => {
   
   const moreMenuRef = useRef(null);
   const moodMenuRef = useRef(null);
+  const syncTimeoutRef = useRef(null);
 
   // Load Google API Scripts dynamically
   useEffect(() => {
@@ -460,6 +461,17 @@ const App = () => {
   useEffect(() => { if (driveFileId) localStorage.setItem('epektasis_fileId', driveFileId); }, [driveFileId]);
   useEffect(() => { if (lastSynced) localStorage.setItem('epektasis_lastSync', lastSynced); }, [lastSynced]);
 
+  // AUTO-SYNC (Debounced 3s)
+  useEffect(() => {
+    if (isDriveConnected && driveFileId && accessToken) {
+      if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+      syncTimeoutRef.current = setTimeout(() => {
+        syncToDrive();
+      }, 3000);
+    }
+    return () => { if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current); };
+  }, [entries, journals, templates, themeConfig, isDriveConnected, driveFileId, accessToken]);
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (moreMenuRef.current && !moreMenuRef.current.contains(event.target)) setIsMoreMenuOpen(false);
@@ -498,8 +510,8 @@ const App = () => {
       const matchesJournal = e.journalId === activeJournal.id;
       const lowerQuery = searchQuery.toLowerCase();
       const matchesSearch = e.title.toLowerCase().includes(lowerQuery) || 
-                           e.content.toLowerCase().includes(lowerQuery) ||
-                           (e.tags && e.tags.some(t => t.includes(lowerQuery)));
+                            e.content.toLowerCase().includes(lowerQuery) ||
+                            (e.tags && e.tags.some(t => t.includes(lowerQuery)));
       
       let matchesArchive = true;
       if (archiveFilter) {
