@@ -242,11 +242,27 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
     }
   };
 
-  const deleteSelectedImage = () => {
+  const deleteSelectedImage = async () => {
     if (selectedImage) {
+      const imgSrc = selectedImage.getAttribute('src');
       selectedImage.remove();
       setSelectedImage(null);
       onChange(editorRef.current.innerHTML);
+
+      // Tell Google Drive to delete the file permanently
+      if (imgSrc && accessToken) {
+        const match = imgSrc.match(/d\/([a-zA-Z0-9_-]+)/);
+        if (match && match[1]) {
+          try {
+            await fetch(`https://www.googleapis.com/drive/v3/files/${match[1]}`, {
+              method: 'DELETE',
+              headers: { 'Authorization': `Bearer ${accessToken}` }
+            });
+          } catch (e) {
+            console.error('Failed to delete image from Drive', e);
+          }
+        }
+      }
     }
   };
 
@@ -599,7 +615,27 @@ const App = () => {
     setShowMobileDetail(true);
   };
 
-  const handleDeleteEntry = (id) => {
+  const handleDeleteEntry = async (id) => {
+    const entryToDelete = entries.find(e => e.id === id);
+    
+    // Self-Cleaning: Delete any photos embedded in this entry from Google Drive
+    if (entryToDelete && accessToken) {
+      const regex = /https:\/\/lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/g;
+      let match;
+      while ((match = regex.exec(entryToDelete.content || '')) !== null) {
+        const fileId = match[1];
+        try {
+          await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${accessToken}` }
+          });
+        } catch (err) {
+          console.error("Failed to delete media from Drive:", err);
+        }
+      }
+    }
+
+    // Delete the entry locally
     const updated = entries.filter(e => e.id !== id);
     setEntries(updated);
     if (selectedEntryId === id && updated.length > 0) {
@@ -658,7 +694,25 @@ const App = () => {
     }
     setModalConfig({
       type: 'confirm', title: 'Delete Journal', message: `Are you sure you want to delete "${activeJournal.name}" and all of its associated entries? This action cannot be undone.`, confirmText: 'Delete', isDestructive: true,
-      onConfirm: () => {
+      onConfirm: async () => {
+        const entriesToDelete = entries.filter(e => e.journalId === id);
+        
+        // Self-Cleaning: Delete ALL photos inside ALL entries of this journal
+        if (accessToken) {
+          const regex = /https:\/\/lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/g;
+          for (const entry of entriesToDelete) {
+            let match;
+            while ((match = regex.exec(entry.content || '')) !== null) {
+              try {
+                await fetch(`https://www.googleapis.com/drive/v3/files/${match[1]}`, {
+                  method: 'DELETE',
+                  headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+              } catch (err) { console.error(err); }
+            }
+          }
+        }
+
         const updatedJournals = journals.filter(j => j.id !== id);
         const updatedEntries = entries.filter(e => e.journalId !== id);
         setJournals(updatedJournals);
