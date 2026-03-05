@@ -3,7 +3,7 @@ import {
   Home, Plus, Search, Book, Calendar, Tag, Settings, ChevronRight, ChevronLeft,
   MoreVertical, Image as ImageIcon, Mic, Smile, Meh, Frown, Mountain, Archive,
   Trash2, FileText, BarChart3, BrainCircuit, Maximize2, Clock, Save, Moon, Sun,
-  X, CheckCircle2, AlertCircle, Menu, Download, Lock, Share2, History, ChevronDown,
+  X, CheckCircle2, AlertCircle, Menu, Download, Lock, Unlock, LogOut, Share2, History, ChevronDown,
   Edit2, Bold, Italic, Underline, Heading1, Heading2, Heading3, List, ListOrdered,
   ImagePlus, AlignLeft, AlignCenter, AlignRight, LayoutTemplate, Palette, Hash, 
   Cloud, CloudOff
@@ -384,6 +384,12 @@ const App = () => {
     return saved ? { ...DEFAULT_THEME, ...JSON.parse(saved) } : DEFAULT_THEME;
   });
 
+  // Security State
+  const [userPin, setUserPin] = useState(() => localStorage.getItem('epektasis_pin') || '');
+  const [isLocked, setIsLocked] = useState(() => !!localStorage.getItem('epektasis_pin'));
+  const [pinInput, setPinInput] = useState('');
+  const [pinSetup, setPinSetup] = useState('');
+
   // Navigation State
   const [activeView, setActiveView] = useState('home');
   const [activeJournal, setActiveJournal] = useState(journals[0] || INITIAL_JOURNALS[0]);
@@ -412,7 +418,6 @@ const App = () => {
   const [isDriveConnected, setIsDriveConnected] = useState(false);
   const [driveFileId, setDriveFileId] = useState(() => localStorage.getItem('epektasis_fileId') || null);
   const [lastSynced, setLastSynced] = useState(() => localStorage.getItem('epektasis_lastSync') || null);
-  const [masterPassword, setMasterPassword] = useState('');
   
   // Mobile Navigation State
   const [showMobileDetail, setShowMobileDetail] = useState(false);
@@ -463,14 +468,14 @@ const App = () => {
 
   // AUTO-SYNC (Debounced 3s)
   useEffect(() => {
-    if (isDriveConnected && driveFileId && accessToken) {
+    if (isDriveConnected && driveFileId && accessToken && !isLocked) {
       if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
       syncTimeoutRef.current = setTimeout(() => {
         syncToDrive();
       }, 3000);
     }
     return () => { if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current); };
-  }, [entries, journals, templates, themeConfig, isDriveConnected, driveFileId, accessToken]);
+  }, [entries, journals, templates, themeConfig, isDriveConnected, driveFileId, accessToken, isLocked]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -726,6 +731,21 @@ const App = () => {
       }
     }
     setTimeout(() => setIsSaving(false), 800);
+  };
+
+  // FULL SIGN OUT / WIPE
+  const handleFullSignOut = () => {
+    setModalConfig({
+      type: 'confirm',
+      title: 'Sign Out & Wipe Data?',
+      message: 'This will remove your vault from this device and disconnect Google Drive. Make sure your latest notes have been synced! You will need your Client ID to sign back in.',
+      confirmText: 'Sign Out',
+      isDestructive: true,
+      onConfirm: () => {
+        localStorage.clear();
+        window.location.reload();
+      }
+    });
   };
 
   const handleExportPDF = (entriesToExport, documentTitle) => {
@@ -1047,6 +1067,68 @@ const App = () => {
               </div>
               
               <div className="space-y-8 pb-12">
+                
+                {/* SECURITY & ACCESS */}
+                <section className="p-6 border border-zinc-200 rounded-3xl bg-zinc-50">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Lock size={20} className="text-zinc-700" />
+                    <h3 className="font-bold text-lg text-zinc-900">Security & Access</h3>
+                  </div>
+                  
+                  <div className="space-y-4 mb-6">
+                    <div>
+                      <label className="block text-sm font-bold text-zinc-700 mb-2">Vault PIN / Password</label>
+                      <div className="flex gap-2">
+                        <input 
+                          type="password" 
+                          placeholder={userPin ? "********" : "Enter a new PIN..."}
+                          value={pinSetup}
+                          onChange={(e) => setPinSetup(e.target.value)}
+                          className="flex-1 px-4 py-2.5 rounded-xl border border-zinc-300 outline-none focus-ring-accent text-sm transition-all"
+                        />
+                        <button 
+                          onClick={() => {
+                            if (!pinSetup) return;
+                            setUserPin(pinSetup);
+                            localStorage.setItem('epektasis_pin', pinSetup);
+                            setPinSetup('');
+                            setModalConfig({ type: 'alert', title: 'PIN Saved', message: 'Your Vault PIN has been updated. You can now lock the app.', confirmText: 'Okay' });
+                          }}
+                          className="px-4 py-2 bg-zinc-800 hover:bg-zinc-900 text-white rounded-xl text-sm font-bold transition-colors shadow-sm"
+                        >
+                          {userPin ? 'Update' : 'Set PIN'}
+                        </button>
+                        {userPin && (
+                          <button 
+                            onClick={() => {
+                              setUserPin('');
+                              localStorage.removeItem('epektasis_pin');
+                              setModalConfig({ type: 'alert', title: 'PIN Removed', message: 'Your Vault is now unlocked by default on this device.', confirmText: 'Okay' });
+                            }}
+                            className="px-4 py-2 bg-red-100 text-red-600 hover:bg-red-200 rounded-xl text-sm font-bold transition-colors"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-xs text-zinc-500 mt-2">Locks the app so others can't open it if you hand them this device.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between py-4 border-t border-zinc-200">
+                    <div>
+                      <p className="font-medium text-red-600">Complete Sign Out</p>
+                      <p className="text-sm text-zinc-500 max-w-xs">Wipes all local data from this device and disconnects Google Drive.</p>
+                    </div>
+                    <button 
+                      onClick={handleFullSignOut}
+                      className="px-6 py-2.5 bg-red-100 text-red-600 hover:bg-red-200 rounded-xl text-sm font-bold transition-colors flex items-center gap-2"
+                    >
+                      <LogOut size={16} /> Sign Out
+                    </button>
+                  </div>
+                </section>
+
                 <section className="p-6 border border-zinc-200 rounded-3xl bg-zinc-50">
                   <div className="flex items-center justify-between mb-6 border-b border-zinc-200 pb-4">
                     <div className="flex items-center gap-2"><Palette size={20} className="text-zinc-700" /><h3 className="font-bold text-lg text-zinc-900">App Theming</h3></div>
@@ -1134,18 +1216,6 @@ const App = () => {
                   </div>
                 </section>
 
-                <section className="p-6 border border-zinc-200 rounded-3xl bg-zinc-50">
-                  <h3 className="font-bold text-lg text-zinc-900 mb-4">Data Management</h3>
-                  <div className="flex items-center justify-between py-3">
-                    <div>
-                      <p className="font-medium text-red-600">Factory Reset</p>
-                      <p className="text-sm text-zinc-500">Delete all journals and memories locally.</p>
-                    </div>
-                    <button className="px-4 py-2 bg-red-100 text-red-600 hover:bg-red-200 rounded-lg text-sm font-bold transition-colors">
-                      Reset OS
-                    </button>
-                  </div>
-                </section>
               </div>
             </div>
           </div>
@@ -1246,21 +1316,21 @@ const App = () => {
               </div>
 
               <div className="flex items-center gap-1 md:gap-2">
+                {userPin && (
+                  <button onClick={() => setIsLocked(true)} className="flex items-center gap-2 px-3 md:px-4 py-2 bg-zinc-800 text-white rounded-full text-xs font-bold hover:bg-zinc-900 transition-all shadow-md mr-1">
+                    <Lock size={14} /><span className="hidden xl:inline">Lock Vault</span>
+                  </button>
+                )}
                 <button onClick={() => setShowTemplatePicker(true)} className="flex items-center gap-2 px-3 md:px-4 py-2 bg-zinc-100 text-zinc-700 rounded-full text-xs font-bold hover:bg-zinc-200 transition-all"><LayoutTemplate size={14} /><span className="hidden xl:inline">Templates</span></button>
-                <button onClick={() => setAIPanelOpen(!isAIPanelOpen)} className="flex items-center gap-2 px-3 md:px-4 py-2 bg-[color:var(--theme-accent)] text-white rounded-full text-xs font-bold hover:bg-accent-dark transition-all shadow-lg shadow-black/10"><BrainCircuit size={14} /><span className="hidden md:inline">Reflect AI</span></button>
                 <button onClick={syncToDrive} className={`p-2 rounded-full transition-all ${isSaving ? 'text-green-600 bg-green-50' : 'text-zinc-400 hover:bg-zinc-100'}`}>{isSaving ? <CheckCircle2 size={20} /> : <Save size={20} />}</button>
                 <div className="w-px h-6 bg-zinc-200 mx-1 hidden md:block" />
-                <button className="hidden md:flex p-2 text-zinc-400 hover:bg-zinc-100 rounded-full transition-all"><Maximize2 size={18} /></button>
                 
                 <div className="relative" ref={moreMenuRef}>
                   <button onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)} className={`p-2 rounded-full transition-all ${isMoreMenuOpen ? 'bg-zinc-100 text-zinc-900' : 'text-zinc-400 hover:bg-zinc-100'}`} disabled={!selectedEntry}><MoreVertical size={18} /></button>
                   {isMoreMenuOpen && selectedEntry && (
                     <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-zinc-100 py-2 z-50 animate-in fade-in zoom-in-95 duration-100">
                       <button onClick={() => { handleExportPDF([selectedEntry], selectedEntry.title || 'Untitled Entry'); setIsMoreMenuOpen(false); }} className="w-full px-4 py-2.5 text-left text-sm text-zinc-700 hover:bg-zinc-50 flex items-center gap-3 transition-colors"><Download size={16} className="text-zinc-400" /> Export Entry as PDF</button>
-                      <button className="w-full px-4 py-2.5 text-left text-sm text-zinc-700 hover:bg-zinc-50 flex items-center gap-3 transition-colors"><Share2 size={16} className="text-zinc-400" /> Share Entry</button>
-                      <button className="w-full px-4 py-2.5 text-left text-sm text-zinc-700 hover:bg-zinc-50 flex items-center gap-3 transition-colors"><History size={16} className="text-zinc-400" /> Version History</button>
                       <div className="h-px bg-zinc-100 my-1 mx-2" />
-                      <button className="w-full px-4 py-2.5 text-left text-sm text-zinc-700 hover:bg-zinc-50 flex items-center gap-3 transition-colors"><Lock size={16} className="text-zinc-400" /> Toggle Encryption</button>
                       <button onClick={() => handleDeleteEntry(selectedEntry.id)} className="w-full px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-3 transition-colors"><Trash2 size={16} /> Delete Entry</button>
                     </div>
                   )}
@@ -1307,178 +1377,212 @@ const App = () => {
 
   return (
     <div className={`flex h-screen w-full overflow-hidden ${isDarkMode ? 'bg-zinc-950 text-white' : 'bg-[#F8F9FA] text-zinc-900'}`}>
-      
-      {/* SIDEBAR */}
-      <aside className={`${isSidebarOpen ? 'w-64' : 'w-0'} bg-[color:var(--theme-primary)] transition-all duration-300 flex flex-col absolute md:relative z-40 h-full overflow-hidden shadow-2xl shrink-0`}>
-        <div className="p-6 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-[color:var(--theme-secondary)] flex items-center justify-center shrink-0"><BrainCircuit size={20} className="text-[color:var(--theme-primary)]" /></div>
-          <h1 className="text-sidebar-hover font-bold tracking-tight text-lg">Epektasis</h1>
+      <style dangerouslySetInnerHTML={{ __html: dynamicCss }} />
+
+      {isLocked ? (
+        <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-900 absolute inset-0 z-50 px-6">
+          <div className="w-16 h-16 bg-[color:var(--theme-primary)] rounded-2xl flex items-center justify-center mb-8 shadow-2xl">
+            <Lock size={32} className="text-[color:var(--theme-secondary)]" />
+          </div>
+          <h1 className="text-3xl font-extrabold text-white mb-2 tracking-tight">Vault Locked</h1>
+          <p className="text-zinc-400 mb-8 text-sm">Enter your PIN to access Epektasis.</p>
+          
+          <form 
+            onSubmit={(e) => { 
+              e.preventDefault(); 
+              if(pinInput === userPin) { setIsLocked(false); setPinInput(''); } 
+              else { setModalConfig({ type: 'alert', title: 'Incorrect PIN', message: 'The PIN you entered is incorrect.', confirmText: 'Try Again' }); setPinInput(''); } 
+            }} 
+            className="flex flex-col gap-4 w-full max-w-xs"
+          >
+            <input 
+              type="password" 
+              value={pinInput} 
+              onChange={e => setPinInput(e.target.value)} 
+              placeholder="••••••••" 
+              className="px-6 py-4 rounded-2xl bg-zinc-800 border border-zinc-700 text-white text-center text-2xl tracking-[0.5em] focus:border-[color:var(--theme-accent)] outline-none transition-colors" 
+              autoFocus 
+            />
+            <button type="submit" className="px-6 py-4 bg-[color:var(--theme-primary)] hover:bg-primary-dark transition-colors rounded-2xl text-white font-bold text-lg shadow-xl">
+              Unlock Vault
+            </button>
+          </form>
         </div>
+      ) : (
+        <>
+          {/* SIDEBAR */}
+          <aside className={`${isSidebarOpen ? 'w-64' : 'w-0'} bg-[color:var(--theme-primary)] transition-all duration-300 flex flex-col absolute md:relative z-40 h-full overflow-hidden shadow-2xl shrink-0`}>
+            <div className="p-6 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-[color:var(--theme-secondary)] flex items-center justify-center shrink-0"><BrainCircuit size={20} className="text-[color:var(--theme-primary)]" /></div>
+              <h1 className="text-sidebar-hover font-bold tracking-tight text-lg">Epektasis</h1>
+            </div>
 
-        <div className="flex-1 overflow-y-auto px-2 space-y-1 custom-scrollbar">
-          <SectionLabel>Core</SectionLabel>
-          <SidebarItem icon={Home} label="Home" active={activeView === 'home'} onClick={() => { setActiveView('home'); setArchiveFilter(null); setTagFilter(null); setShowMobileDetail(false); if(window.innerWidth < 768) setSidebarOpen(false); }} />
-          <SidebarItem icon={FileText} label="All Entries" active={activeView === 'entries' && !archiveFilter && !tagFilter} onClick={() => { setActiveView('entries'); setArchiveFilter(null); setTagFilter(null); setShowMobileDetail(false); if(window.innerWidth < 768) setSidebarOpen(false); }} />
-          <SidebarItem icon={LayoutTemplate} label="Templates" active={activeView === 'templates'} onClick={() => { setActiveView('templates'); setShowMobileDetail(false); if(window.innerWidth < 768) setSidebarOpen(false); }} />
-          <SidebarItem icon={Calendar} label="Calendar" active={activeView === 'calendar'} onClick={() => { setActiveView('calendar'); setShowMobileDetail(true); if(window.innerWidth < 768) setSidebarOpen(false); }} />
-          <SidebarItem icon={BarChart3} label="Life Analytics" active={activeView === 'analytics'} onClick={() => { setActiveView('analytics'); setShowMobileDetail(true); if(window.innerWidth < 768) setSidebarOpen(false); }} />
+            <div className="flex-1 overflow-y-auto px-2 space-y-1 custom-scrollbar">
+              <SectionLabel>Core</SectionLabel>
+              <SidebarItem icon={Home} label="Home" active={activeView === 'home'} onClick={() => { setActiveView('home'); setArchiveFilter(null); setTagFilter(null); setShowMobileDetail(false); if(window.innerWidth < 768) setSidebarOpen(false); }} />
+              <SidebarItem icon={FileText} label="All Entries" active={activeView === 'entries' && !archiveFilter && !tagFilter} onClick={() => { setActiveView('entries'); setArchiveFilter(null); setTagFilter(null); setShowMobileDetail(false); if(window.innerWidth < 768) setSidebarOpen(false); }} />
+              <SidebarItem icon={LayoutTemplate} label="Templates" active={activeView === 'templates'} onClick={() => { setActiveView('templates'); setShowMobileDetail(false); if(window.innerWidth < 768) setSidebarOpen(false); }} />
+              <SidebarItem icon={Calendar} label="Calendar" active={activeView === 'calendar'} onClick={() => { setActiveView('calendar'); setShowMobileDetail(true); if(window.innerWidth < 768) setSidebarOpen(false); }} />
+              <SidebarItem icon={BarChart3} label="Life Analytics" active={activeView === 'analytics'} onClick={() => { setActiveView('analytics'); setShowMobileDetail(true); if(window.innerWidth < 768) setSidebarOpen(false); }} />
 
-          <div className="flex items-center justify-between px-4 mt-8 mb-2 group">
-            <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-sidebar-muted">Journals</span>
-            <button onClick={handleAddJournal} className="text-sidebar-muted hover:text-sidebar-hover transition-colors" title="Add New Journal"><Plus size={14} /></button>
-          </div>
-          {journals.map(j => (
-            <SidebarItem key={j.id} icon={Book} label={j.name} active={activeJournal?.id === j.id && activeView === 'entries'} onClick={() => { setActiveJournal(j); setActiveView('entries'); setArchiveFilter(null); setTagFilter(null); setShowMobileDetail(false); if(window.innerWidth < 768) setSidebarOpen(false); }} badge={entries.filter(e => e.journalId === j.id).length} />
-          ))}
-
-          <SectionLabel>Tags</SectionLabel>
-          <div className="space-y-0.5">
-            <button onClick={() => setIsTagsExpanded(!isTagsExpanded)} className="w-full flex items-center justify-between px-4 py-1.5 text-xs transition-colors text-sidebar-inactive hover:text-sidebar-hover"><div className="flex items-center gap-2">{isTagsExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}<span>Hashtags</span></div></button>
-            {isTagsExpanded && (
-              <div className="ml-6 space-y-0.5 mt-1">
-                {dynamicTags.map(tag => {
-                  const isTagActive = tagFilter === tag;
-                  return (
-                    <button key={tag} onClick={() => { setTagFilter(isTagActive ? null : tag); setArchiveFilter(null); setActiveView('entries'); setShowMobileDetail(false); if(window.innerWidth < 768) setSidebarOpen(false); }} className={`w-full text-left px-4 py-1 text-[13px] transition-colors flex items-center gap-2 ${isTagActive ? 'text-[color:var(--theme-sidebar-text)] font-bold' : 'text-sidebar-muted hover:text-sidebar-hover'}`}><Hash size={10} />{tag}</button>
-                  );
-                })}
-                {dynamicTags.length === 0 && <div className="px-4 py-1 text-[12px] text-sidebar-muted italic">No tags yet</div>}
+              <div className="flex items-center justify-between px-4 mt-8 mb-2 group">
+                <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-sidebar-muted">Journals</span>
+                <button onClick={handleAddJournal} className="text-sidebar-muted hover:text-sidebar-hover transition-colors" title="Add New Journal"><Plus size={14} /></button>
               </div>
-            )}
-          </div>
+              {journals.map(j => (
+                <SidebarItem key={j.id} icon={Book} label={j.name} active={activeJournal?.id === j.id && activeView === 'entries'} onClick={() => { setActiveJournal(j); setActiveView('entries'); setArchiveFilter(null); setTagFilter(null); setShowMobileDetail(false); if(window.innerWidth < 768) setSidebarOpen(false); }} badge={entries.filter(e => e.journalId === j.id).length} />
+              ))}
 
-          <SectionLabel>Archives</SectionLabel>
-          {Object.entries(dynamicArchives).map(([year, months]) => {
-            const isYearExpanded = expandedYears.includes(year);
-            const isYearActive = archiveFilter?.year === year && !archiveFilter?.month;
-            return (
-              <div key={year} className="space-y-0.5">
-                <button onClick={() => toggleYear(year)} className={`w-full flex items-center justify-between px-4 py-1.5 text-xs transition-colors ${isYearActive ? 'text-[color:var(--theme-sidebar-text)] font-bold' : 'text-sidebar-inactive hover:text-sidebar-hover'}`}><div className="flex items-center gap-2">{isYearExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}<span onClick={(e) => { e.stopPropagation(); selectArchive(year); setShowMobileDetail(false); if(window.innerWidth < 768) setSidebarOpen(false); }}>{year}</span></div></button>
-                {isYearExpanded && (
-                  <div className="ml-6 space-y-0.5">
-                    {months.map(month => {
-                      const isMonthActive = archiveFilter?.year === year && archiveFilter?.month === month;
-                      return ( <button key={month} onClick={() => { selectArchive(year, month); setShowMobileDetail(false); if(window.innerWidth < 768) setSidebarOpen(false); }} className={`w-full text-left px-4 py-1 text-[13px] transition-colors ${isMonthActive ? 'text-[color:var(--theme-sidebar-text)] font-bold' : 'text-sidebar-muted hover:text-sidebar-hover'}`}>{month}</button> );
+              <SectionLabel>Tags</SectionLabel>
+              <div className="space-y-0.5">
+                <button onClick={() => setIsTagsExpanded(!isTagsExpanded)} className="w-full flex items-center justify-between px-4 py-1.5 text-xs transition-colors text-sidebar-inactive hover:text-sidebar-hover"><div className="flex items-center gap-2">{isTagsExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}<span>Hashtags</span></div></button>
+                {isTagsExpanded && (
+                  <div className="ml-6 space-y-0.5 mt-1">
+                    {dynamicTags.map(tag => {
+                      const isTagActive = tagFilter === tag;
+                      return (
+                        <button key={tag} onClick={() => { setTagFilter(isTagActive ? null : tag); setArchiveFilter(null); setActiveView('entries'); setShowMobileDetail(false); if(window.innerWidth < 768) setSidebarOpen(false); }} className={`w-full text-left px-4 py-1 text-[13px] transition-colors flex items-center gap-2 ${isTagActive ? 'text-[color:var(--theme-sidebar-text)] font-bold' : 'text-sidebar-muted hover:text-sidebar-hover'}`}><Hash size={10} />{tag}</button>
+                      );
                     })}
+                    {dynamicTags.length === 0 && <div className="px-4 py-1 text-[12px] text-sidebar-muted italic">No tags yet</div>}
                   </div>
                 )}
               </div>
-            );
-          })}
-        </div>
 
-        <div className="p-4 border-t border-white/10 bg-primary-dark">
-          <SidebarItem icon={Settings} label="System Settings" active={activeView === 'settings'} onClick={() => { setActiveView('settings'); setShowMobileDetail(true); if(window.innerWidth < 768) setSidebarOpen(false); }} />
-        </div>
-      </aside>
-
-      {/* DYNAMIC LIST PANEL */}
-      {(activeView === 'entries' || activeView === 'templates') && (
-        <div className={`w-full md:w-80 border-r ${isDarkMode ? 'border-zinc-800 bg-zinc-950' : 'border-zinc-200 bg-white'} ${showMobileDetail ? 'hidden md:flex' : 'flex'} flex-col shadow-sm z-10 shrink-0`}>
-          <div className="p-4 border-b border-zinc-200/50 flex flex-col gap-4">
-            <div className="flex justify-between items-start">
-              <div className="flex-1 min-w-0 pr-2">
-                {activeView === 'entries' ? (
-                  <>
-                    {isEditingJournalName ? (
-                      <input autoFocus value={activeJournal?.name || ''} onChange={(e) => { const updated = journals.map(j => j.id === activeJournal.id ? { ...j, name: e.target.value } : j); setJournals(updated); setActiveJournal(updated.find(j => j.id === activeJournal.id)); }} onBlur={() => setIsEditingJournalName(false)} onKeyDown={(e) => e.key === 'Enter' && setIsEditingJournalName(false)} className="font-bold text-xl bg-transparent border-b border-zinc-300 outline-none w-full text-zinc-900" />
-                    ) : (
-                      <h2 className="font-bold text-xl truncate cursor-pointer hover:text-[color:var(--theme-accent)] transition-colors flex items-center gap-2 group" onClick={() => setIsEditingJournalName(true)} title="Click to rename journal">{activeJournal?.name || 'Journal'} <Edit2 size={12} className="opacity-0 group-hover:opacity-100 text-zinc-400" /></h2>
-                    )}
-                    {(archiveFilter || tagFilter) && (
-                      <span className="text-[10px] text-[color:var(--theme-accent)] font-bold uppercase tracking-widest mt-0.5 flex items-center gap-1.5 flex-wrap">
-                        {archiveFilter && <span className="flex items-center gap-1"><Archive size={10} /> {archiveFilter.month ? `${archiveFilter.month} ` : ''}{archiveFilter.year}</span>}
-                        {archiveFilter && tagFilter && <span className="text-zinc-300">•</span>}
-                        {tagFilter && <span className="flex items-center"><Hash size={10} className="mr-0.5" /> {tagFilter}</span>}
-                      </span>
-                    )}
-                  </>
-                ) : ( <h2 className="font-bold text-xl truncate">Saved Templates</h2> )}
-              </div>
-              <div className="flex items-center gap-0.5 shrink-0">
-                <button onClick={() => { setActiveView('home'); setArchiveFilter(null); setTagFilter(null); setShowMobileDetail(false); }} className="p-1.5 hover:bg-zinc-100 rounded-md transition-colors text-zinc-400 hover:text-zinc-900" title="Go Home"><Home size={16} /></button>
-                {activeView === 'entries' && <button onClick={() => handleExportPDF(filteredEntries, archiveFilter ? `Archive: ${archiveFilter.month || ''} ${archiveFilter.year}` : `Journal: ${activeJournal?.name}`)} className="p-1.5 hover:bg-zinc-100 rounded-md transition-colors text-zinc-400 hover:text-zinc-900" title="Export List to PDF"><Download size={16} /></button>}
-                {activeView === 'entries' && !archiveFilter && !tagFilter && <button onClick={() => handleDeleteJournal(activeJournal.id)} className="p-1.5 hover:bg-red-50 rounded-md transition-colors text-zinc-400 hover:text-red-600" title="Delete Journal"><Trash2 size={16} /></button>}
-                <button onClick={() => setSidebarOpen(!isSidebarOpen)} className="p-1.5 hover:bg-zinc-100 rounded-md transition-colors text-zinc-400 hover:text-zinc-900" title="Toggle Sidebar"><Menu size={18} /></button>
-              </div>
-            </div>
-            
-            {activeView === 'entries' && (
-              <div className="relative mt-1">
-                <Search className="absolute left-3 top-2.5 text-zinc-400" size={16} />
-                <input type="text" placeholder="Search tags or text..." className={`w-full pl-10 pr-4 py-2 text-sm rounded-full ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-zinc-100 border-transparent'} focus-ring-accent outline-none transition-all`} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-              </div>
-            )}
-          </div>
-
-          <div className="flex-1 overflow-y-auto space-y-px custom-scrollbar">
-            {activeView === 'entries' && (filteredEntries.length > 0 ? (
-              filteredEntries.map(entry => {
-                const entryMoodObj = MOODS.find(m => m.id === entry.mood) || MOODS.find(m => m.id === 'neutral');
-                const EntryMoodIcon = entryMoodObj.icon;
+              <SectionLabel>Archives</SectionLabel>
+              {Object.entries(dynamicArchives).map(([year, months]) => {
+                const isYearExpanded = expandedYears.includes(year);
+                const isYearActive = archiveFilter?.year === year && !archiveFilter?.month;
                 return (
-                  <button key={entry.id} onClick={() => { setSelectedEntryId(entry.id); setShowMobileDetail(true); }} className={`w-full text-left p-5 transition-all relative border-b border-zinc-100 ${selectedEntryId === entry.id ? (isDarkMode ? 'bg-primary-20 shadow-inner' : 'bg-secondary-30 shadow-sm') : 'hover:bg-zinc-50'}`}>
-                    {selectedEntryId === entry.id && <div className="absolute left-0 top-0 bottom-0 w-1 bg-[color:var(--theme-primary)]" />}
-                    <div className="flex justify-between items-start mb-1"><span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{entry.createdAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span><EntryMoodIcon size={14} className={entryMoodObj.color} /></div>
-                    <h3 className={`font-bold text-sm mb-1 leading-tight ${selectedEntryId === entry.id ? 'text-[color:var(--theme-primary)]' : 'text-zinc-800'}`}>{entry.title || 'Untitled Entry'}</h3>
-                    <p className="text-xs text-zinc-500 line-clamp-2 leading-relaxed">{entry.content ? entry.content.replace(/<[^>]+>/g, '').substring(0, 100) : 'Empty entry...'}</p>
-                    {entry.tags && entry.tags.length > 0 && (
-                      <div className="flex gap-1.5 mt-2.5 overflow-hidden flex-wrap">
-                        {entry.tags.slice(0, 3).map(tag => ( <span key={tag} className="text-[9px] font-bold px-1.5 py-0.5 rounded text-[color:var(--theme-primary)] bg-[color:var(--theme-primary)]/10 truncate max-w-[80px]">#{tag}</span> ))}
-                        {entry.tags.length > 3 && <span className="text-[9px] font-bold text-zinc-400 py-0.5">+{entry.tags.length - 3}</span>}
+                  <div key={year} className="space-y-0.5">
+                    <button onClick={() => toggleYear(year)} className={`w-full flex items-center justify-between px-4 py-1.5 text-xs transition-colors ${isYearActive ? 'text-[color:var(--theme-sidebar-text)] font-bold' : 'text-sidebar-inactive hover:text-sidebar-hover'}`}><div className="flex items-center gap-2">{isYearExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}<span onClick={(e) => { e.stopPropagation(); selectArchive(year); setShowMobileDetail(false); if(window.innerWidth < 768) setSidebarOpen(false); }}>{year}</span></div></button>
+                    {isYearExpanded && (
+                      <div className="ml-6 space-y-0.5">
+                        {months.map(month => {
+                          const isMonthActive = archiveFilter?.year === year && archiveFilter?.month === month;
+                          return ( <button key={month} onClick={() => { selectArchive(year, month); setShowMobileDetail(false); if(window.innerWidth < 768) setSidebarOpen(false); }} className={`w-full text-left px-4 py-1 text-[13px] transition-colors ${isMonthActive ? 'text-[color:var(--theme-sidebar-text)] font-bold' : 'text-sidebar-muted hover:text-sidebar-hover'}`}>{month}</button> );
+                        })}
                       </div>
                     )}
-                  </button>
+                  </div>
                 );
-              })
-            ) : ( <div className="p-8 text-center text-zinc-400 italic text-sm">No entries found.</div> ))}
-
-            {activeView === 'templates' && (templates.length > 0 ? (
-              templates.map(template => (
-                <button key={template.id} onClick={() => { setSelectedTemplateId(template.id); setShowMobileDetail(true); }} className={`w-full text-left p-5 transition-all relative border-b border-zinc-100 ${selectedTemplateId === template.id ? (isDarkMode ? 'bg-primary-20 shadow-inner' : 'bg-secondary-30 shadow-sm') : 'hover:bg-zinc-50'}`}>
-                  {selectedTemplateId === template.id && <div className="absolute left-0 top-0 bottom-0 w-1 bg-[color:var(--theme-primary)]" />}
-                  <div className="flex justify-between items-start mb-1"><LayoutTemplate size={14} className={selectedTemplateId === template.id ? 'text-[color:var(--theme-primary)]' : 'text-zinc-400'} /></div>
-                  <h3 className={`font-bold text-sm mb-1 leading-tight ${selectedTemplateId === template.id ? 'text-[color:var(--theme-primary)]' : 'text-zinc-800'}`}>{template.name || 'Untitled Template'}</h3>
-                  <p className="text-xs text-zinc-500 line-clamp-2 leading-relaxed">{template.content ? template.content.replace(/<[^>]+>/g, '').substring(0, 100) : 'Empty template...'}</p>
-                </button>
-              ))
-            ) : ( <div className="p-8 text-center text-zinc-400 italic text-sm">No templates saved.</div> ))}
-
-            <button onClick={activeView === 'entries' ? handleCreateEntry : handleCreateTemplate} className="w-full py-8 text-sm text-zinc-400 font-medium hover:text-[color:var(--theme-primary)] flex flex-col items-center gap-2 transition-colors">
-              <div className="p-2 border-2 border-dashed border-zinc-200 rounded-full"><Plus size={20} /></div>
-              {activeView === 'entries' ? 'New Entry' : 'New Template'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* RENDER DYNAMIC CONTENT */}
-      {renderContent()}
-
-      {/* TEMPLATE PICKER MODAL */}
-      {showTemplatePicker && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-200 mx-4 flex flex-col max-h-[80vh]">
-            <div className="flex justify-between items-center mb-6 shrink-0">
-              <div className="flex items-center gap-3"><div className="p-2 bg-[color:var(--theme-primary)] rounded-lg text-[color:var(--theme-secondary)]"><LayoutTemplate size={18} /></div><h3 className="font-bold text-lg text-zinc-900">Insert Template</h3></div>
-              <button onClick={() => setShowTemplatePicker(false)} className="p-1 hover:bg-zinc-100 rounded-full text-zinc-500 transition-colors"><X size={20} /></button>
+              })}
             </div>
-            <div className="space-y-3 overflow-y-auto custom-scrollbar pr-2 flex-1">
-              {templates.map(t => (
-                <button key={t.id} onClick={() => applyTemplateToEntry(t)} className="w-full text-left p-4 rounded-xl border border-zinc-200 hover:border-[color:var(--theme-primary)] hover:bg-zinc-50 transition-colors group">
-                  <h4 className="font-bold text-zinc-800 group-hover:text-[color:var(--theme-primary)]">{t.name}</h4>
-                  <p className="text-xs text-zinc-500 line-clamp-2 mt-1">{t.content.replace(/<[^>]+>/g, '')}</p>
-                </button>
-              ))}
-              {templates.length === 0 && <p className="text-center text-zinc-500 text-sm py-4">You haven't saved any templates yet. Go to Core {'>'} Templates to create one.</p>}
+
+            <div className="p-4 border-t border-white/10 bg-primary-dark">
+              <SidebarItem icon={Settings} label="System Settings" active={activeView === 'settings'} onClick={() => { setActiveView('settings'); setShowMobileDetail(true); if(window.innerWidth < 768) setSidebarOpen(false); }} />
             </div>
-          </div>
-        </div>
+          </aside>
+
+          {/* DYNAMIC LIST PANEL */}
+          {(activeView === 'entries' || activeView === 'templates') && (
+            <div className={`w-full md:w-80 border-r ${isDarkMode ? 'border-zinc-800 bg-zinc-950' : 'border-zinc-200 bg-white'} ${showMobileDetail ? 'hidden md:flex' : 'flex'} flex-col shadow-sm z-10 shrink-0`}>
+              <div className="p-4 border-b border-zinc-200/50 flex flex-col gap-4">
+                <div className="flex justify-between items-start">
+                  <div className="flex-1 min-w-0 pr-2">
+                    {activeView === 'entries' ? (
+                      <>
+                        {isEditingJournalName ? (
+                          <input autoFocus value={activeJournal?.name || ''} onChange={(e) => { const updated = journals.map(j => j.id === activeJournal.id ? { ...j, name: e.target.value } : j); setJournals(updated); setActiveJournal(updated.find(j => j.id === activeJournal.id)); }} onBlur={() => setIsEditingJournalName(false)} onKeyDown={(e) => e.key === 'Enter' && setIsEditingJournalName(false)} className="font-bold text-xl bg-transparent border-b border-zinc-300 outline-none w-full text-zinc-900" />
+                        ) : (
+                          <h2 className="font-bold text-xl truncate cursor-pointer hover:text-[color:var(--theme-accent)] transition-colors flex items-center gap-2 group" onClick={() => setIsEditingJournalName(true)} title="Click to rename journal">{activeJournal?.name || 'Journal'} <Edit2 size={12} className="opacity-0 group-hover:opacity-100 text-zinc-400" /></h2>
+                        )}
+                        {(archiveFilter || tagFilter) && (
+                          <span className="text-[10px] text-[color:var(--theme-accent)] font-bold uppercase tracking-widest mt-0.5 flex items-center gap-1.5 flex-wrap">
+                            {archiveFilter && <span className="flex items-center gap-1"><Archive size={10} /> {archiveFilter.month ? `${archiveFilter.month} ` : ''}{archiveFilter.year}</span>}
+                            {archiveFilter && tagFilter && <span className="text-zinc-300">•</span>}
+                            {tagFilter && <span className="flex items-center"><Hash size={10} className="mr-0.5" /> {tagFilter}</span>}
+                          </span>
+                        )}
+                      </>
+                    ) : ( <h2 className="font-bold text-xl truncate">Saved Templates</h2> )}
+                  </div>
+                  <div className="flex items-center gap-0.5 shrink-0">
+                    <button onClick={() => { setActiveView('home'); setArchiveFilter(null); setTagFilter(null); setShowMobileDetail(false); }} className="p-1.5 hover:bg-zinc-100 rounded-md transition-colors text-zinc-400 hover:text-zinc-900" title="Go Home"><Home size={16} /></button>
+                    {activeView === 'entries' && <button onClick={() => handleExportPDF(filteredEntries, archiveFilter ? `Archive: ${archiveFilter.month || ''} ${archiveFilter.year}` : `Journal: ${activeJournal?.name}`)} className="p-1.5 hover:bg-zinc-100 rounded-md transition-colors text-zinc-400 hover:text-zinc-900" title="Export List to PDF"><Download size={16} /></button>}
+                    {activeView === 'entries' && !archiveFilter && !tagFilter && <button onClick={() => handleDeleteJournal(activeJournal.id)} className="p-1.5 hover:bg-red-50 rounded-md transition-colors text-zinc-400 hover:text-red-600" title="Delete Journal"><Trash2 size={16} /></button>}
+                    <button onClick={() => setSidebarOpen(!isSidebarOpen)} className="p-1.5 hover:bg-zinc-100 rounded-md transition-colors text-zinc-400 hover:text-zinc-900" title="Toggle Sidebar"><Menu size={18} /></button>
+                  </div>
+                </div>
+                
+                {activeView === 'entries' && (
+                  <div className="relative mt-1">
+                    <Search className="absolute left-3 top-2.5 text-zinc-400" size={16} />
+                    <input type="text" placeholder="Search tags or text..." className={`w-full pl-10 pr-4 py-2 text-sm rounded-full ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-zinc-100 border-transparent'} focus-ring-accent outline-none transition-all`} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex-1 overflow-y-auto space-y-px custom-scrollbar">
+                {activeView === 'entries' && (filteredEntries.length > 0 ? (
+                  filteredEntries.map(entry => {
+                    const entryMoodObj = MOODS.find(m => m.id === entry.mood) || MOODS.find(m => m.id === 'neutral');
+                    const EntryMoodIcon = entryMoodObj.icon;
+                    return (
+                      <button key={entry.id} onClick={() => { setSelectedEntryId(entry.id); setShowMobileDetail(true); }} className={`w-full text-left p-5 transition-all relative border-b border-zinc-100 ${selectedEntryId === entry.id ? (isDarkMode ? 'bg-primary-20 shadow-inner' : 'bg-secondary-30 shadow-sm') : 'hover:bg-zinc-50'}`}>
+                        {selectedEntryId === entry.id && <div className="absolute left-0 top-0 bottom-0 w-1 bg-[color:var(--theme-primary)]" />}
+                        <div className="flex justify-between items-start mb-1"><span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{entry.createdAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span><EntryMoodIcon size={14} className={entryMoodObj.color} /></div>
+                        <h3 className={`font-bold text-sm mb-1 leading-tight ${selectedEntryId === entry.id ? 'text-[color:var(--theme-primary)]' : 'text-zinc-800'}`}>{entry.title || 'Untitled Entry'}</h3>
+                        <p className="text-xs text-zinc-500 line-clamp-2 leading-relaxed">{entry.content ? entry.content.replace(/<[^>]+>/g, '').substring(0, 100) : 'Empty entry...'}</p>
+                        {entry.tags && entry.tags.length > 0 && (
+                          <div className="flex gap-1.5 mt-2.5 overflow-hidden flex-wrap">
+                            {entry.tags.slice(0, 3).map(tag => ( <span key={tag} className="text-[9px] font-bold px-1.5 py-0.5 rounded text-[color:var(--theme-primary)] bg-[color:var(--theme-primary)]/10 truncate max-w-[80px]">#{tag}</span> ))}
+                            {entry.tags.length > 3 && <span className="text-[9px] font-bold text-zinc-400 py-0.5">+{entry.tags.length - 3}</span>}
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })
+                ) : ( <div className="p-8 text-center text-zinc-400 italic text-sm">No entries found.</div> ))}
+
+                {activeView === 'templates' && (templates.length > 0 ? (
+                  templates.map(template => (
+                    <button key={template.id} onClick={() => { setSelectedTemplateId(template.id); setShowMobileDetail(true); }} className={`w-full text-left p-5 transition-all relative border-b border-zinc-100 ${selectedTemplateId === template.id ? (isDarkMode ? 'bg-primary-20 shadow-inner' : 'bg-secondary-30 shadow-sm') : 'hover:bg-zinc-50'}`}>
+                      {selectedTemplateId === template.id && <div className="absolute left-0 top-0 bottom-0 w-1 bg-[color:var(--theme-primary)]" />}
+                      <div className="flex justify-between items-start mb-1"><LayoutTemplate size={14} className={selectedTemplateId === template.id ? 'text-[color:var(--theme-primary)]' : 'text-zinc-400'} /></div>
+                      <h3 className={`font-bold text-sm mb-1 leading-tight ${selectedTemplateId === template.id ? 'text-[color:var(--theme-primary)]' : 'text-zinc-800'}`}>{template.name || 'Untitled Template'}</h3>
+                      <p className="text-xs text-zinc-500 line-clamp-2 leading-relaxed">{template.content ? template.content.replace(/<[^>]+>/g, '').substring(0, 100) : 'Empty template...'}</p>
+                    </button>
+                  ))
+                ) : ( <div className="p-8 text-center text-zinc-400 italic text-sm">No templates saved.</div> ))}
+
+                <button onClick={activeView === 'entries' ? handleCreateEntry : handleCreateTemplate} className="w-full py-8 text-sm text-zinc-400 font-medium hover:text-[color:var(--theme-primary)] flex flex-col items-center gap-2 transition-colors">
+                  <div className="p-2 border-2 border-dashed border-zinc-200 rounded-full"><Plus size={20} /></div>
+                  {activeView === 'entries' ? 'New Entry' : 'New Template'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* RENDER DYNAMIC CONTENT */}
+          {renderContent()}
+
+          {/* TEMPLATE PICKER MODAL */}
+          {showTemplatePicker && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+              <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-200 mx-4 flex flex-col max-h-[80vh]">
+                <div className="flex justify-between items-center mb-6 shrink-0">
+                  <div className="flex items-center gap-3"><div className="p-2 bg-[color:var(--theme-primary)] rounded-lg text-[color:var(--theme-secondary)]"><LayoutTemplate size={18} /></div><h3 className="font-bold text-lg text-zinc-900">Insert Template</h3></div>
+                  <button onClick={() => setShowTemplatePicker(false)} className="p-1 hover:bg-zinc-100 rounded-full text-zinc-500 transition-colors"><X size={20} /></button>
+                </div>
+                <div className="space-y-3 overflow-y-auto custom-scrollbar pr-2 flex-1">
+                  {templates.map(t => (
+                    <button key={t.id} onClick={() => applyTemplateToEntry(t)} className="w-full text-left p-4 rounded-xl border border-zinc-200 hover:border-[color:var(--theme-primary)] hover:bg-zinc-50 transition-colors group">
+                      <h4 className="font-bold text-zinc-800 group-hover:text-[color:var(--theme-primary)]">{t.name}</h4>
+                      <p className="text-xs text-zinc-500 line-clamp-2 mt-1">{t.content.replace(/<[^>]+>/g, '')}</p>
+                    </button>
+                  ))}
+                  {templates.length === 0 && <p className="text-center text-zinc-500 text-sm py-4">You haven't saved any templates yet. Go to Core {'>'} Templates to create one.</p>}
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* CUSTOM MODAL ENGINE */}
       {modalConfig && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-zinc-900/60 backdrop-blur-md animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200 mx-4">
             <h3 className="font-bold text-lg mb-2 text-zinc-900">{modalConfig.title || 'Attention'}</h3>
             <p className="text-zinc-600 mb-6 text-sm leading-relaxed">{modalConfig.message}</p>
@@ -1490,7 +1594,6 @@ const App = () => {
         </div>
       )}
 
-      <style dangerouslySetInnerHTML={{ __html: dynamicCss }} />
     </div>
   );
 };
