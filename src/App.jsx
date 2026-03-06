@@ -6,7 +6,7 @@ import {
   X, CheckCircle2, AlertCircle, Menu, Download, Lock, Unlock, LogOut, Share2, History, ChevronDown,
   Edit2, Bold, Italic, Underline, Heading1, Heading2, Heading3, List, ListOrdered,
   ImagePlus, AlignLeft, AlignCenter, AlignRight, LayoutTemplate, Palette, Hash, 
-  Cloud, CloudOff
+  Cloud, CloudOff, Highlighter
 } from 'lucide-react';
 
 /**
@@ -44,7 +44,7 @@ const INITIAL_ENTRIES = [
     id: 'e1',
     journalId: 'j1',
     title: 'Designing the Future',
-    content: '<p>It is February 2026. The shift towards agentic workflows has completely redefined how we interact with personal data. <b>Epektasis</b> is becoming the core of my digital reflection...</p><ul><li>Faster processing</li><li>Deeper insights</li></ul>',
+    content: '<p>It is February 2026. The shift towards agentic workflows has completely redefined how we interact with personal data. <span style="background-color: #fef08a;"><b>Epektasis</b> is becoming the core of my digital reflection...</span></p><ul><li>Faster processing</li><li>Deeper insights</li></ul>',
     createdAt: new Date('2026-02-28T10:30:00'),
     tags: ['philosophy', 'tech'],
     mood: 'serene'
@@ -111,6 +111,10 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
   const [isUploading, setIsUploading] = useState(false);
   const recognitionRef = useRef(null);
 
+  // Highlighter State
+  const [showHighlightMenu, setShowHighlightMenu] = useState(false);
+  const highlightMenuRef = useRef(null);
+
   useEffect(() => {
     if (editorRef.current && editorRef.current.innerHTML !== content) {
       editorRef.current.innerHTML = content || '';
@@ -123,6 +127,16 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
         recognitionRef.current.stop();
       }
     };
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (highlightMenuRef.current && !highlightMenuRef.current.contains(event.target)) {
+        setShowHighlightMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const saveSelection = () => {
@@ -148,6 +162,14 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
     document.execCommand(command, false, value);
     saveSelection();
     onChange(editorRef.current?.innerHTML || '');
+  };
+
+  const applyHighlight = (color) => {
+    restoreSelection();
+    document.execCommand('backColor', false, color);
+    saveSelection();
+    onChange(editorRef.current.innerHTML);
+    setShowHighlightMenu(false);
   };
 
   const handleImage = async (e) => {
@@ -363,6 +385,41 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
             <ToolbarButton icon={Bold} onClick={() => exec('bold')} title="Bold" />
             <ToolbarButton icon={Italic} onClick={() => exec('italic')} title="Italic" />
             <ToolbarButton icon={Underline} onClick={() => exec('underline')} title="Underline" />
+            
+            <div className="relative flex items-center" ref={highlightMenuRef}>
+              <button
+                onMouseDown={(e) => { e.preventDefault(); saveSelection(); setShowHighlightMenu(!showHighlightMenu); }}
+                className={`p-1.5 rounded transition-colors ml-0.5 ${showHighlightMenu ? 'bg-zinc-200 text-zinc-900' : 'text-zinc-500 hover:bg-zinc-200 hover:text-zinc-900'}`}
+                title="Highlight Text"
+              >
+                <Highlighter size={16} />
+              </button>
+              {showHighlightMenu && (
+                <div className="absolute top-full left-0 mt-1 p-2 bg-white border border-zinc-200 rounded-xl shadow-xl z-50 flex gap-1.5 animate-in fade-in zoom-in-95 w-max">
+                  {[
+                    { label: 'Yellow', color: '#fef08a' },
+                    { label: 'Green', color: '#bbf7d0' },
+                    { label: 'Blue', color: '#bfdbfe' },
+                    { label: 'Pink', color: '#fbcfe8' },
+                    { label: 'Purple', color: '#e9d5ff' },
+                    { label: 'Orange', color: '#fed7aa' },
+                    { label: 'Clear', color: 'transparent', icon: X }
+                  ].map(h => (
+                    <button
+                      key={h.label}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => applyHighlight(h.color)}
+                      className="w-6 h-6 rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-sm border border-black/10"
+                      style={{ backgroundColor: h.color === 'transparent' ? '#f4f4f5' : h.color }}
+                      title={h.label}
+                    >
+                      {h.color === 'transparent' && <h.icon size={12} className="text-zinc-500" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="w-px h-4 bg-zinc-300 mx-1" />
             <ToolbarButton icon={Heading1} onClick={() => exec('formatBlock', 'H1')} title="Heading 1" />
             <ToolbarButton icon={Heading2} onClick={() => exec('formatBlock', 'H2')} title="Heading 2" />
