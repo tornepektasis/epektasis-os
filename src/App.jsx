@@ -1282,175 +1282,170 @@ const App = () => {
         );
       case 'settings':
         return (
-          <main className={`flex-1 flex-col relative bg-white ${showMobileDetail ? 'flex' : 'hidden md:flex'}`}>
-            <header className="h-16 border-b border-zinc-100 flex items-center justify-between px-4 md:px-8 bg-white/80 backdrop-blur-md sticky top-0 z-10 shrink-0">
-              <div className="flex items-center gap-4">
+          <div className={`flex-1 flex-col p-6 md:p-12 overflow-y-auto bg-white custom-scrollbar ${showMobileDetail ? 'flex' : 'hidden md:flex'}`}>
+            <div className="max-w-3xl mx-auto w-full">
+              <div className="flex items-center gap-4 self-start mb-6">
                 <button onClick={() => setSidebarOpen(!isSidebarOpen)} className={`p-2 -ml-2 text-zinc-500 hover:bg-zinc-100 rounded-full transition-colors ${isSidebarOpen ? 'md:hidden' : ''}`}><Menu size={24} /></button>
                 <button onClick={() => { setActiveView('home'); setTagFilter(null); setArchiveFilter(null); setShowMobileDetail(false); }} className="text-zinc-500 hover:text-zinc-900 flex items-center gap-2 font-semibold transition-colors"><Home size={20} /> <span className="hidden sm:inline">Home</span></button>
               </div>
-            </header>
-            
-            <div className="flex-1 overflow-y-auto p-6 md:p-12 custom-scrollbar bg-white">
-              <div className="max-w-3xl mx-auto w-full">
-                <div className="flex items-center gap-4 mb-8">
-                  <div className="p-3 bg-[color:var(--theme-primary)] rounded-2xl text-[color:var(--theme-secondary)]"><Settings size={28} /></div>
-                  <h2 className="text-3xl font-extrabold text-zinc-900">System Settings</h2>
-                </div>
+              <div className="flex items-center gap-4 mb-8">
+                <div className="p-3 bg-[color:var(--theme-primary)] rounded-2xl text-[color:var(--theme-secondary)]"><Settings size={28} /></div>
+                <h2 className="text-3xl font-extrabold text-zinc-900">System Settings</h2>
+              </div>
+              
+              <div className="space-y-8 pb-12">
                 
-                <div className="space-y-8 pb-12">
+                {/* SECURITY & ACCESS */}
+                <section className="p-6 border border-zinc-200 rounded-3xl bg-zinc-50">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Lock size={20} className="text-zinc-700" />
+                    <h3 className="font-bold text-lg text-zinc-900">Security & Access</h3>
+                  </div>
                   
-                  {/* SECURITY & ACCESS */}
-                  <section className="p-6 border border-zinc-200 rounded-3xl bg-zinc-50">
-                    <div className="flex items-center gap-2 mb-4">
-                      <Lock size={20} className="text-zinc-700" />
-                      <h3 className="font-bold text-lg text-zinc-900">Security & Access</h3>
-                    </div>
-                    
-                    <div className="space-y-4 mb-6">
-                      <div>
-                        <label className="block text-sm font-bold text-zinc-700 mb-2">Vault PIN / Password</label>
-                        <div className="flex gap-2">
-                          <input 
-                            type="password" 
-                            placeholder={userPin ? "********" : "Enter a new PIN..."}
-                            value={pinSetup}
-                            onChange={(e) => setPinSetup(e.target.value)}
-                            className="flex-1 px-4 py-2.5 rounded-xl border border-zinc-300 outline-none focus-ring-accent text-base transition-all"
-                          />
+                  <div className="space-y-4 mb-6">
+                    <div>
+                      <label className="block text-sm font-bold text-zinc-700 mb-2">Vault PIN / Password</label>
+                      <div className="flex gap-2">
+                        <input 
+                          type="password" 
+                          placeholder={userPin ? "********" : "Enter a new PIN..."}
+                          value={pinSetup}
+                          onChange={(e) => setPinSetup(e.target.value)}
+                          className="flex-1 px-4 py-2.5 rounded-xl border border-zinc-300 outline-none focus-ring-accent text-base transition-all"
+                        />
+                        <button 
+                          onClick={() => {
+                            if (!pinSetup) return;
+                            setUserPin(pinSetup);
+                            localStorage.setItem('epektasis_pin', pinSetup);
+                            setPinSetup('');
+                            setModalConfig({ type: 'alert', title: 'PIN Saved', message: 'Your Vault PIN has been updated. You can now lock the app.', confirmText: 'Okay' });
+                          }}
+                          className="px-4 py-2 bg-zinc-800 hover:bg-zinc-900 text-white rounded-xl text-sm font-bold transition-colors shadow-sm"
+                        >
+                          {userPin ? 'Update' : 'Set PIN'}
+                        </button>
+                        {userPin && (
                           <button 
                             onClick={() => {
-                              if (!pinSetup) return;
-                              setUserPin(pinSetup);
-                              localStorage.setItem('epektasis_pin', pinSetup);
-                              setPinSetup('');
-                              setModalConfig({ type: 'alert', title: 'PIN Saved', message: 'Your Vault PIN has been updated. You can now lock the app.', confirmText: 'Okay' });
+                              setUserPin('');
+                              localStorage.removeItem('epektasis_pin');
+                              setModalConfig({ type: 'alert', title: 'PIN Removed', message: 'Your Vault is now unlocked by default on this device.', confirmText: 'Okay' });
                             }}
-                            className="px-4 py-2 bg-zinc-800 hover:bg-zinc-900 text-white rounded-xl text-sm font-bold transition-colors shadow-sm"
+                            className="px-4 py-2 bg-red-100 text-red-600 hover:bg-red-200 rounded-xl text-sm font-bold transition-colors"
                           >
-                            {userPin ? 'Update' : 'Set PIN'}
+                            Remove
                           </button>
-                          {userPin && (
-                            <button 
-                              onClick={() => {
-                                setUserPin('');
-                                localStorage.removeItem('epektasis_pin');
-                                setModalConfig({ type: 'alert', title: 'PIN Removed', message: 'Your Vault is now unlocked by default on this device.', confirmText: 'Okay' });
-                              }}
-                              className="px-4 py-2 bg-red-100 text-red-600 hover:bg-red-200 rounded-xl text-sm font-bold transition-colors"
-                            >
-                              Remove
-                            </button>
-                          )}
-                        </div>
-                        <p className="text-xs text-zinc-500 mt-2">Locks the app so others can't open it if you hand them this device.</p>
+                        )}
                       </div>
+                      <p className="text-xs text-zinc-500 mt-2">Locks the app so others can't open it if you hand them this device.</p>
                     </div>
+                  </div>
 
-                    <div className="flex items-center justify-between py-4 border-t border-zinc-200">
-                      <div>
-                        <p className="font-medium text-red-600">Complete Sign Out</p>
-                        <p className="text-sm text-zinc-500 max-w-xs">Wipes all local data from this device and disconnects Google Drive.</p>
-                      </div>
-                      <button 
-                        onClick={handleFullSignOut}
-                        className="px-6 py-2.5 bg-red-100 text-red-600 hover:bg-red-200 rounded-xl text-sm font-bold transition-colors flex items-center gap-2"
-                      >
-                        <LogOut size={16} /> Sign Out
-                      </button>
+                  <div className="flex items-center justify-between py-4 border-t border-zinc-200">
+                    <div>
+                      <p className="font-medium text-red-600">Complete Sign Out</p>
+                      <p className="text-sm text-zinc-500 max-w-xs">Wipes all local data from this device and disconnects Google Drive.</p>
                     </div>
-                  </section>
+                    <button 
+                      onClick={handleFullSignOut}
+                      className="px-6 py-2.5 bg-red-100 text-red-600 hover:bg-red-200 rounded-xl text-sm font-bold transition-colors flex items-center gap-2"
+                    >
+                      <LogOut size={16} /> Sign Out
+                    </button>
+                  </div>
+                </section>
 
-                  <section className="p-6 border border-zinc-200 rounded-3xl bg-zinc-50">
-                    <div className="flex items-center justify-between mb-6 border-b border-zinc-200 pb-4">
-                      <div className="flex items-center gap-2"><Palette size={20} className="text-zinc-700" /><h3 className="font-bold text-lg text-zinc-900">App Theming</h3></div>
-                      <button onClick={() => setThemeConfig(DEFAULT_THEME)} className="text-xs font-bold text-zinc-500 hover:text-zinc-900 px-3 py-1.5 bg-zinc-200 hover:bg-zinc-300 rounded-lg transition-colors">Restore Defaults</button>
-                    </div>
+                <section className="p-6 border border-zinc-200 rounded-3xl bg-zinc-50">
+                  <div className="flex items-center justify-between mb-6 border-b border-zinc-200 pb-4">
+                    <div className="flex items-center gap-2"><Palette size={20} className="text-zinc-700" /><h3 className="font-bold text-lg text-zinc-900">App Theming</h3></div>
+                    <button onClick={() => setThemeConfig(DEFAULT_THEME)} className="text-xs font-bold text-zinc-500 hover:text-zinc-900 px-3 py-1.5 bg-zinc-200 hover:bg-zinc-300 rounded-lg transition-colors">Restore Defaults</button>
+                  </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                      <div>
-                        <label className="block text-sm font-bold text-zinc-700 mb-2">Primary Color</label>
-                        <div className="flex items-center gap-3"><input type="color" value={themeConfig.primary} onChange={e => setThemeConfig({...themeConfig, primary: e.target.value})} className="w-10 h-10 rounded cursor-pointer border-0 bg-transparent p-0" /><input type="text" value={themeConfig.primary} onChange={e => setThemeConfig({...themeConfig, primary: e.target.value})} className="flex-1 px-3 py-2 text-base rounded-xl border border-zinc-300 uppercase focus-ring-accent" /></div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-bold text-zinc-700 mb-2">Secondary Color</label>
-                        <div className="flex items-center gap-3"><input type="color" value={themeConfig.secondary} onChange={e => setThemeConfig({...themeConfig, secondary: e.target.value})} className="w-10 h-10 rounded cursor-pointer border-0 bg-transparent p-0" /><input type="text" value={themeConfig.secondary} onChange={e => setThemeConfig({...themeConfig, secondary: e.target.value})} className="flex-1 px-3 py-2 text-base rounded-xl border border-zinc-300 uppercase focus-ring-accent" /></div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-bold text-zinc-700 mb-2">Accent Color</label>
-                        <div className="flex items-center gap-3"><input type="color" value={themeConfig.accent} onChange={e => setThemeConfig({...themeConfig, accent: e.target.value})} className="w-10 h-10 rounded cursor-pointer border-0 bg-transparent p-0" /><input type="text" value={themeConfig.accent} onChange={e => setThemeConfig({...themeConfig, accent: e.target.value})} className="flex-1 px-3 py-2 text-base rounded-xl border border-zinc-300 uppercase focus-ring-accent" /></div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-bold text-zinc-700 mb-2">Sidebar Text</label>
-                        <div className="flex items-center gap-3"><input type="color" value={themeConfig.sidebarText} onChange={e => setThemeConfig({...themeConfig, sidebarText: e.target.value})} className="w-10 h-10 rounded cursor-pointer border-0 bg-transparent p-0" /><input type="text" value={themeConfig.sidebarText} onChange={e => setThemeConfig({...themeConfig, sidebarText: e.target.value})} className="flex-1 px-3 py-2 text-base rounded-xl border border-zinc-300 uppercase focus-ring-accent" /></div>
-                      </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                      <label className="block text-sm font-bold text-zinc-700 mb-2">Primary Color</label>
+                      <div className="flex items-center gap-3"><input type="color" value={themeConfig.primary} onChange={e => setThemeConfig({...themeConfig, primary: e.target.value})} className="w-10 h-10 rounded cursor-pointer border-0 bg-transparent p-0" /><input type="text" value={themeConfig.primary} onChange={e => setThemeConfig({...themeConfig, primary: e.target.value})} className="flex-1 px-3 py-2 text-base rounded-xl border border-zinc-300 uppercase focus-ring-accent" /></div>
                     </div>
+                    <div>
+                      <label className="block text-sm font-bold text-zinc-700 mb-2">Secondary Color</label>
+                      <div className="flex items-center gap-3"><input type="color" value={themeConfig.secondary} onChange={e => setThemeConfig({...themeConfig, secondary: e.target.value})} className="w-10 h-10 rounded cursor-pointer border-0 bg-transparent p-0" /><input type="text" value={themeConfig.secondary} onChange={e => setThemeConfig({...themeConfig, secondary: e.target.value})} className="flex-1 px-3 py-2 text-base rounded-xl border border-zinc-300 uppercase focus-ring-accent" /></div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-zinc-700 mb-2">Accent Color</label>
+                      <div className="flex items-center gap-3"><input type="color" value={themeConfig.accent} onChange={e => setThemeConfig({...themeConfig, accent: e.target.value})} className="w-10 h-10 rounded cursor-pointer border-0 bg-transparent p-0" /><input type="text" value={themeConfig.accent} onChange={e => setThemeConfig({...themeConfig, accent: e.target.value})} className="flex-1 px-3 py-2 text-base rounded-xl border border-zinc-300 uppercase focus-ring-accent" /></div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-zinc-700 mb-2">Sidebar Text</label>
+                      <div className="flex items-center gap-3"><input type="color" value={themeConfig.sidebarText} onChange={e => setThemeConfig({...themeConfig, sidebarText: e.target.value})} className="w-10 h-10 rounded cursor-pointer border-0 bg-transparent p-0" /><input type="text" value={themeConfig.sidebarText} onChange={e => setThemeConfig({...themeConfig, sidebarText: e.target.value})} className="flex-1 px-3 py-2 text-base rounded-xl border border-zinc-300 uppercase focus-ring-accent" /></div>
+                    </div>
+                  </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-zinc-200 mb-6">
-                      <div>
-                        <label className="block text-sm font-bold text-zinc-700 mb-2">UI Font (Interface)</label>
-                        <select value={themeConfig.uiFont} onChange={e => setThemeConfig({...themeConfig, uiFont: e.target.value})} className="w-full px-3 py-2 text-base rounded-xl border border-zinc-300 bg-white focus-ring-accent outline-none">
-                          <option value="Inter">Inter</option><option value="Roboto">Roboto</option><option value="Open Sans">Open Sans</option><option value="system-ui">System Default</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-bold text-zinc-700 mb-2">Document Font (Editor)</label>
-                        <select value={themeConfig.docFont} onChange={e => setThemeConfig({...themeConfig, docFont: e.target.value})} className="w-full px-3 py-2 text-base rounded-xl border border-zinc-300 bg-white focus-ring-accent outline-none">
-                          <option value="Charter">Charter</option><option value="Merriweather">Merriweather</option><option value="Lora">Lora</option><option value="Georgia">Georgia</option>
-                        </select>
-                      </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-zinc-200 mb-6">
+                    <div>
+                      <label className="block text-sm font-bold text-zinc-700 mb-2">UI Font (Interface)</label>
+                      <select value={themeConfig.uiFont} onChange={e => setThemeConfig({...themeConfig, uiFont: e.target.value})} className="w-full px-3 py-2 text-base rounded-xl border border-zinc-300 bg-white focus-ring-accent outline-none">
+                        <option value="Inter">Inter</option><option value="Roboto">Roboto</option><option value="Open Sans">Open Sans</option><option value="system-ui">System Default</option>
+                      </select>
                     </div>
+                    <div>
+                      <label className="block text-sm font-bold text-zinc-700 mb-2">Document Font (Editor)</label>
+                      <select value={themeConfig.docFont} onChange={e => setThemeConfig({...themeConfig, docFont: e.target.value})} className="w-full px-3 py-2 text-base rounded-xl border border-zinc-300 bg-white focus-ring-accent outline-none">
+                        <option value="Charter">Charter</option><option value="Merriweather">Merriweather</option><option value="Lora">Lora</option><option value="Georgia">Georgia</option>
+                      </select>
+                    </div>
+                  </div>
 
-                    <div className="flex items-center justify-between py-3 border-t border-zinc-200">
-                      <div>
-                        <p className="font-medium text-zinc-800">Dark Mode</p>
-                        <p className="text-sm text-zinc-500">Toggle dark aesthetic across the OS.</p>
-                      </div>
-                      <button onClick={() => setDarkMode(!isDarkMode)} className={`w-12 h-6 rounded-full transition-colors relative ${isDarkMode ? 'bg-[color:var(--theme-primary)]' : 'bg-zinc-300'}`}>
-                        <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${isDarkMode ? 'translate-x-7' : 'translate-x-1'}`} />
-                      </button>
+                  <div className="flex items-center justify-between py-3 border-t border-zinc-200">
+                    <div>
+                      <p className="font-medium text-zinc-800">Dark Mode</p>
+                      <p className="text-sm text-zinc-500">Toggle dark aesthetic across the OS.</p>
                     </div>
-                  </section>
+                    <button onClick={() => setDarkMode(!isDarkMode)} className={`w-12 h-6 rounded-full transition-colors relative ${isDarkMode ? 'bg-[color:var(--theme-primary)]' : 'bg-zinc-300'}`}>
+                      <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${isDarkMode ? 'translate-x-7' : 'translate-x-1'}`} />
+                    </button>
+                  </div>
+                </section>
 
-                  <section className="p-6 border border-accent-20 rounded-3xl bg-accent-5">
-                    <div className="flex items-center gap-2 mb-4">
-                      {isDriveConnected ? <Cloud size={20} className="text-[color:var(--theme-accent)]" /> : <CloudOff size={20} className="text-[color:var(--theme-accent)]" />}
-                      <h3 className="font-bold text-lg text-[color:var(--theme-accent)]">Cloud Sync & Encryption</h3>
+                <section className="p-6 border border-accent-20 rounded-3xl bg-accent-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    {isDriveConnected ? <Cloud size={20} className="text-[color:var(--theme-accent)]" /> : <CloudOff size={20} className="text-[color:var(--theme-accent)]" />}
+                    <h3 className="font-bold text-lg text-[color:var(--theme-accent)]">Cloud Sync & Encryption</h3>
+                  </div>
+                  
+                  <div className="space-y-4 mb-6">
+                    <div>
+                      <label className="block text-sm font-bold text-zinc-700 mb-1">Google OAuth Client ID</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g., 123456789-abcxyz.apps.googleusercontent.com"
+                        value={googleClientId}
+                        onChange={(e) => setGoogleClientId(e.target.value)}
+                        className="w-full px-4 py-2 rounded-xl border border-zinc-300 focus-ring-accent outline-none transition-all text-base"
+                      />
+                      <p className="text-xs text-zinc-500 mt-1">Required to save your encrypted vault to Google Drive.</p>
                     </div>
-                    
-                    <div className="space-y-4 mb-6">
-                      <div>
-                        <label className="block text-sm font-bold text-zinc-700 mb-1">Google OAuth Client ID</label>
-                        <input 
-                          type="text" 
-                          placeholder="e.g., 123456789-abcxyz.apps.googleusercontent.com"
-                          value={googleClientId}
-                          onChange={(e) => setGoogleClientId(e.target.value)}
-                          className="w-full px-4 py-2 rounded-xl border border-zinc-300 focus-ring-accent outline-none transition-all text-base"
-                        />
-                        <p className="text-xs text-zinc-500 mt-1">Required to save your encrypted vault to Google Drive.</p>
-                      </div>
-                    </div>
+                  </div>
 
-                    <div className="flex items-center justify-between py-3 border-t border-accent-20 pt-4">
-                      <div>
-                        <p className="font-medium text-zinc-800">Drive Connection Status</p>
-                        <p className={`text-sm font-bold ${isDriveConnected ? 'text-green-600' : 'text-zinc-500'}`}>
-                          {isDriveConnected ? `Connected • Synced ${lastSynced}` : 'Not Connected'}
-                        </p>
-                      </div>
-                      <button 
-                        onClick={handleConnectGoogleDrive}
-                        className={`px-6 py-2.5 text-white rounded-xl text-sm font-bold transition-colors shadow-lg ${isDriveConnected ? 'bg-green-600 hover:bg-green-700' : 'bg-[color:var(--theme-accent)] hover:bg-accent-dark'}`}
-                      >
-                        {isDriveConnected ? 'Manual Sync' : 'Connect to Drive'}
-                      </button>
+                  <div className="flex items-center justify-between py-3 border-t border-accent-20 pt-4">
+                    <div>
+                      <p className="font-medium text-zinc-800">Drive Connection Status</p>
+                      <p className={`text-sm font-bold ${isDriveConnected ? 'text-green-600' : 'text-zinc-500'}`}>
+                        {isDriveConnected ? `Connected • Synced ${lastSynced}` : 'Not Connected'}
+                      </p>
                     </div>
-                  </section>
+                    <button 
+                      onClick={handleConnectGoogleDrive}
+                      className={`px-6 py-2.5 text-white rounded-xl text-sm font-bold transition-colors shadow-lg ${isDriveConnected ? 'bg-green-600 hover:bg-green-700' : 'bg-[color:var(--theme-accent)] hover:bg-accent-dark'}`}
+                    >
+                      {isDriveConnected ? 'Manual Sync' : 'Connect to Drive'}
+                    </button>
+                  </div>
+                </section>
 
-                </div>
               </div>
             </div>
-          </main>
+          </div>
         );
       case 'analytics': {
         const totalEntries = entries.length;
