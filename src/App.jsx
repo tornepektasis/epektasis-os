@@ -88,7 +88,7 @@ const SidebarItem = ({ icon: Icon, label, active, onClick, badge }) => (
   >
     <div className="flex items-center gap-3">
       <Icon size={18} />
-      <span className="text-sm tracking-tight truncate">{label}</span>
+      <span className="text-sm sidebar-label truncate">{label}</span>
     </div>
     {badge !== undefined && (
       <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${active ? 'bg-[color:var(--theme-primary)] text-[color:var(--theme-secondary)]' : 'bg-white/20 text-sidebar-hover'}`}>
@@ -161,6 +161,26 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
         selection.removeAllRanges();
         selection.addRange(savedRange.current);
       }
+    }
+  };
+
+  // Smart Quotes Interceptor
+  const handleKeyDown = (e) => {
+    if (e.key === '"' || e.key === "'") {
+      const selection = window.getSelection();
+      if (!selection.rangeCount) return;
+      
+      const range = selection.getRangeAt(0);
+      const preText = range.startContainer.textContent.slice(0, range.startOffset);
+      // Determine if opening quote based on preceding character (space, newline, or structural bracket)
+      const isOpening = preText.length === 0 || /[\s\[{(]$/.test(preText);
+      
+      let charToInsert = '';
+      if (e.key === '"') charToInsert = isOpening ? '“' : '”';
+      if (e.key === "'") charToInsert = isOpening ? '‘' : '’';
+
+      e.preventDefault();
+      document.execCommand('insertText', false, charToInsert);
     }
   };
   
@@ -562,6 +582,7 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
           setTimeout(() => setSelectedImage(null), 150);
         }}
         onKeyUp={saveSelection}
+        onKeyDown={handleKeyDown}
         className="px-6 py-8 md:px-12 md:py-16 min-h-[500px] md:h-[65vh] md:overflow-y-auto custom-scrollbar outline-none rte-content font-serif bg-white"
         placeholder="Begin your reflection..."
       />
@@ -1047,11 +1068,11 @@ const App = () => {
             body { font-family: ${docFontStack}; line-height: 1.6; color: #111; max-width: 800px; margin: 0 auto; padding: 40px; }
             .header-block { border-bottom: 2px solid ${themeConfig.primary}; padding-bottom: 20px; margin-bottom: 50px; text-align: center; }
             h1 { font-family: 'Quicksand', sans-serif; margin: 0 0 10px 0; }
-            .export-meta { font-family: ${uiFontStack}; font-size: 14px; color: #666; }
+            .export-meta { font-family: ${uiFontStack}; font-size: 14px; color: #666; font-variant: all-small-caps; text-transform: lowercase; }
             .entry { margin-bottom: 60px; page-break-inside: avoid; }
             .entry-title { font-size: 28px; font-weight: bold; margin-bottom: 8px; font-family: 'Quicksand', sans-serif; color: ${themeConfig.primary}; }
-            .entry-meta { font-size: 13px; color: #666; margin-bottom: 20px; font-family: ${uiFontStack}; text-transform: uppercase; letter-spacing: 1px; }
-            .entry-tags { margin-bottom: 20px; font-family: ${uiFontStack}; font-size: 12px; color: ${themeConfig.accent}; font-weight: bold; }
+            .entry-meta { font-size: 13px; color: #666; margin-bottom: 20px; font-family: ${uiFontStack}; font-variant: all-small-caps; text-transform: lowercase; letter-spacing: 1px; }
+            .entry-tags { margin-bottom: 20px; font-family: ${uiFontStack}; font-size: 12px; color: ${themeConfig.accent}; font-weight: bold; font-variant: all-small-caps; text-transform: lowercase; }
             .entry-content { font-size: 18px; color: #333; }
             .entry-content img { max-width: 100%; height: auto; border-radius: 8px; margin: 10px 0; }
             hr { border: 0; border-top: 1px solid #eee; margin-top: 60px; }
@@ -1118,7 +1139,17 @@ const App = () => {
     ::-moz-selection { background-color: color-mix(in srgb, var(--theme-accent) 25%, transparent); color: inherit; }
     body { font-family: var(--font-ui) !important; }
     .font-serif { font-family: var(--font-doc) !important; }
-    .font-heading { font-family: var(--font-heading) !important; }
+    .font-heading { font-family: var(--font-heading) !important; letter-spacing: -0.01em; }
+    .sidebar-label { letter-spacing: 0.01em; }
+    
+    .meta-small-caps { 
+      font-variant: all-small-caps; 
+      -webkit-font-variant: all-small-caps; 
+      font-variant-caps: all-small-caps; 
+      text-transform: lowercase; 
+      letter-spacing: 0.04em; 
+    }
+
     .hover\\:bg-primary-dark:hover { background-color: color-mix(in srgb, var(--theme-primary) 85%, black) !important; }
     .hover\\:bg-accent-dark:hover { background-color: color-mix(in srgb, var(--theme-accent) 85%, black) !important; }
     .bg-primary-20 { background-color: color-mix(in srgb, var(--theme-primary) 20%, transparent) !important; }
@@ -1144,6 +1175,9 @@ const App = () => {
       line-height: 1.8; /* More breathing room */
       color: inherit;
       font-size: var(--fluid-base);
+      hanging-punctuation: first allow-end;
+      hyphens: auto;
+      -webkit-hyphens: auto;
     }
     .rte-content h1 { font-family: var(--font-heading) !important; font-size: var(--fluid-h1); font-weight: 800; margin-bottom: 1.5rem; margin-top: 2rem; letter-spacing: -0.02em; color: inherit; line-height: 1.2; }
     .rte-content h2 { font-family: var(--font-heading) !important; font-size: var(--fluid-h2); font-weight: 700; margin-bottom: 1rem; margin-top: 2rem; letter-spacing: -0.01em; color: inherit; line-height: 1.25; }
@@ -1257,7 +1291,7 @@ const App = () => {
                             </div>
                           )}
                           <div className="flex justify-between items-start mb-4">
-                            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest bg-zinc-50 px-2 py-1 rounded border border-zinc-100">
+                            <span className="text-[10px] font-bold text-zinc-500 meta-small-caps bg-zinc-50 px-2 py-1 rounded border border-zinc-100">
                               {entry.createdAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                             </span>
                             <div className="w-2 h-2 rounded-full shadow-sm" style={{ backgroundColor: journal?.color || 'var(--theme-primary)' }} />
@@ -1736,7 +1770,7 @@ const App = () => {
                     />
                     
                     <div className="flex flex-wrap items-center justify-center gap-4 text-sm text-zinc-500 font-medium relative">
-                      <div className="flex items-center gap-1.5 px-3 py-1 bg-white border border-zinc-200 shadow-sm rounded-full">
+                      <div className="flex items-center gap-1.5 px-3 py-1 bg-white border border-zinc-200 shadow-sm rounded-full meta-small-caps">
                         <Calendar size={12} className="text-[color:var(--theme-primary)]" />
                         {selectedEntry.createdAt.toLocaleDateString(undefined, { dateStyle: 'long' })}
                       </div>
@@ -1756,7 +1790,7 @@ const App = () => {
                     
                     <div className="flex flex-wrap items-center justify-center gap-2 pt-4">
                       {selectedEntry.tags?.map(tag => (
-                        <span key={tag} className="flex items-center gap-1 px-3 py-1 bg-white border border-[color:var(--theme-primary)]/20 text-[color:var(--theme-primary)] rounded-full text-xs font-bold transition-colors shadow-sm">
+                        <span key={tag} className="flex items-center gap-1 px-3 py-1 bg-white border border-[color:var(--theme-primary)]/20 text-[color:var(--theme-primary)] rounded-full text-xs font-bold transition-colors shadow-sm meta-small-caps">
                           #{tag}
                           <button onClick={() => { const updated = entries.map(ent => ent.id === selectedEntry.id ? { ...ent, tags: ent.tags.filter(t => t !== tag) } : ent); setEntries(updated); }} className="hover:text-red-500 transition-colors ml-1 p-0.5 rounded-full hover:bg-red-50" title="Remove Tag"><X size={10} /></button>
                         </span>
@@ -1971,7 +2005,7 @@ const App = () => {
                             <p className="text-xs text-zinc-500 line-clamp-2 leading-relaxed">{entry.content ? entry.content.replace(/<[^>]+>/g, '').substring(0, 100) : 'Empty entry...'}</p>
                             {entry.tags && entry.tags.length > 0 && (
                               <div className="flex gap-1.5 mt-3 overflow-hidden flex-wrap">
-                                {entry.tags.slice(0, 3).map(tag => ( <span key={tag} className="text-[10px] font-bold px-2 py-0.5 rounded-full text-[color:var(--theme-primary)] bg-[color:var(--theme-primary)]/10 border border-[color:var(--theme-primary)]/20 truncate max-w-[80px]">#{tag}</span> ))}
+                                {entry.tags.slice(0, 3).map(tag => ( <span key={tag} className="text-[10px] font-bold px-2 py-0.5 rounded-full text-[color:var(--theme-primary)] bg-[color:var(--theme-primary)]/10 border border-[color:var(--theme-primary)]/20 truncate max-w-[80px] meta-small-caps">#{tag}</span> ))}
                                 {entry.tags.length > 3 && <span className="text-[10px] font-bold text-zinc-400 py-0.5">+{entry.tags.length - 3}</span>}
                               </div>
                             )}
