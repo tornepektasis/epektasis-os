@@ -27,7 +27,7 @@ const MOODS = [
   { id: 'serene', label: 'Serene', icon: Smile, color: 'text-blue-500' },
   { id: 'accomplished', label: 'Accomplished', icon: CheckCircle2, color: 'text-purple-500' },
   { id: 'neutral', label: 'Neutral', icon: Meh, color: 'text-zinc-500' },
-  { id: 'complicated', label: "It's Complicated", icon: HelpCircle, color: 'text-zinc-400' },
+  { id: 'complicated', label: 'Complicated', icon: HelpCircle, color: 'text-zinc-400' },
   { id: 'anxious', label: 'Anxious', icon: AlertCircle, color: 'text-orange-500' },
   { id: 'sad', label: 'Sad', icon: Frown, color: 'text-blue-400' },
   { id: 'angry', label: 'Angry', icon: Frown, color: 'text-red-500' }
@@ -512,7 +512,7 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
           setTimeout(() => setSelectedImage(null), 150);
         }}
         onKeyUp={saveSelection}
-        className="p-6 pb-32 md:pb-[40vh] min-h-[500px] outline-none rte-content font-serif text-lg leading-relaxed text-zinc-700 bg-white"
+        className="p-6 min-h-[500px] outline-none rte-content font-serif text-lg leading-relaxed text-zinc-700 bg-white"
         placeholder="Begin your reflection..."
       />
     </div>
@@ -1248,7 +1248,7 @@ const App = () => {
                 <button onClick={() => handleDeleteTemplate(selectedTemplate.id)} className="p-2 text-zinc-400 hover:bg-red-50 hover:text-red-600 rounded-full transition-all" disabled={!selectedTemplate}><Trash2 size={18} /></button>
               </div>
             </header>
-            <div className="flex-1 overflow-y-auto px-8 py-12 flex justify-center custom-scrollbar bg-[#F8F9FA]/30">
+            <div className="flex-1 overflow-y-auto px-8 pt-12 pb-32 md:pb-[40vh] flex justify-center custom-scrollbar bg-[#F8F9FA]/30">
               {selectedTemplate ? (
                 <div className="max-w-3xl w-full space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                   <div className="space-y-4">
@@ -1273,6 +1273,7 @@ const App = () => {
                     }}
                     onShowMessage={(msg) => setModalConfig({ type: 'alert', title: 'Notice', message: msg, confirmText: 'Got it' })}
                   />
+                  <div className="h-32 md:h-[40vh] w-full shrink-0 pointer-events-none" />
                 </div>
               ) : (
                 <div className="max-w-2xl w-full h-full flex flex-col items-center justify-center text-zinc-400 animate-in fade-in duration-500">
@@ -1585,7 +1586,7 @@ const App = () => {
               </div>
             </header>
 
-            <div className="flex-1 overflow-y-auto px-8 py-12 flex justify-center custom-scrollbar bg-[#F8F9FA]/30">
+            <div className="flex-1 overflow-y-auto px-8 pt-12 pb-32 md:pb-[40vh] flex justify-center custom-scrollbar bg-[#F8F9FA]/30">
               {selectedEntry ? (
                 <div className="max-w-3xl w-full space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                   <div className="space-y-4">
@@ -1612,6 +1613,10 @@ const App = () => {
                     </div>
                   </div>
                   <RichTextEditor content={selectedEntry.content} accessToken={accessToken} folderId={driveFolderId} onChange={(html) => { const updated = entries.map(ent => ent.id === selectedEntry.id ? { ...ent, content: html } : ent); setEntries(updated); }} onShowMessage={(msg) => setModalConfig({ type: 'alert', title: 'Notice', message: msg, confirmText: 'Got it' })} />
+                  
+                  {/* Invisible spacer block so you can't type below the editor, but can still scroll! */}
+                  <div className="h-32 md:h-[40vh] w-full shrink-0 pointer-events-none" />
+
                 </div>
               ) : (
                 <div className="max-w-2xl w-full h-full flex flex-col items-center justify-center text-zinc-400 animate-in fade-in duration-500"><Book size={48} className="mb-4 opacity-20" /><p>No entry selected{activeJournal ? ` in ${activeJournal.name}` : ''}.</p><button onClick={handleCreateEntry} className="mt-6 px-6 py-2.5 bg-[color:var(--theme-primary)] hover:bg-primary-dark transition-colors text-[color:var(--theme-secondary)] rounded-full text-sm font-bold flex items-center gap-2 shadow-lg"><Plus size={16} /> Create New Entry</button></div>
