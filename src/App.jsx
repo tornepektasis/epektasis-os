@@ -1043,13 +1043,13 @@ const App = () => {
         <head>
           <title>${documentTitle} - Epektasis Export</title>
           <style>
-            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Charter:wght@400;700&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@700&family=Inter:wght@400;700&family=Charter:wght@400;700&display=swap');
             body { font-family: ${docFontStack}; line-height: 1.6; color: #111; max-width: 800px; margin: 0 auto; padding: 40px; }
             .header-block { border-bottom: 2px solid ${themeConfig.primary}; padding-bottom: 20px; margin-bottom: 50px; text-align: center; }
-            h1 { font-family: ${uiFontStack}; margin: 0 0 10px 0; }
+            h1 { font-family: 'Quicksand', sans-serif; margin: 0 0 10px 0; }
             .export-meta { font-family: ${uiFontStack}; font-size: 14px; color: #666; }
             .entry { margin-bottom: 60px; page-break-inside: avoid; }
-            .entry-title { font-size: 28px; font-weight: bold; margin-bottom: 8px; font-family: ${uiFontStack}; color: ${themeConfig.primary}; }
+            .entry-title { font-size: 28px; font-weight: bold; margin-bottom: 8px; font-family: 'Quicksand', sans-serif; color: ${themeConfig.primary}; }
             .entry-meta { font-size: 13px; color: #666; margin-bottom: 20px; font-family: ${uiFontStack}; text-transform: uppercase; letter-spacing: 1px; }
             .entry-tags { margin-bottom: 20px; font-family: ${uiFontStack}; font-size: 12px; color: ${themeConfig.accent}; font-weight: bold; }
             .entry-content { font-size: 18px; color: #333; }
@@ -1084,6 +1084,7 @@ const App = () => {
   // --- Dynamic CSS Engine ---
   const getGoogleFontsUrl = () => {
     const fonts = [];
+    fonts.push(`family=Quicksand:wght@400;500;600;700`);
     if (!['system-ui', 'Georgia'].includes(themeConfig.uiFont)) fonts.push(`family=${themeConfig.uiFont.replace(/ /g, '+')}:wght@400;500;600;700;800`);
     if (!['system-ui', 'Georgia'].includes(themeConfig.docFont)) fonts.push(`family=${themeConfig.docFont.replace(/ /g, '+')}:wght@400;700`);
     if (fonts.length === 0) return '';
@@ -1103,6 +1104,7 @@ const App = () => {
       --theme-sidebar-text: ${themeConfig.sidebarText};
       --font-ui: ${uiFontStack};
       --font-doc: ${docFontStack};
+      --font-heading: 'Quicksand', sans-serif;
 
       /* FLUID TYPOGRAPHY VARIABLES */
       --fluid-base: clamp(1.05rem, 1vw + 0.8rem, 1.25rem);
@@ -1116,6 +1118,7 @@ const App = () => {
     ::-moz-selection { background-color: color-mix(in srgb, var(--theme-accent) 25%, transparent); color: inherit; }
     body { font-family: var(--font-ui) !important; }
     .font-serif { font-family: var(--font-doc) !important; }
+    .font-heading { font-family: var(--font-heading) !important; }
     .hover\\:bg-primary-dark:hover { background-color: color-mix(in srgb, var(--theme-primary) 85%, black) !important; }
     .hover\\:bg-accent-dark:hover { background-color: color-mix(in srgb, var(--theme-accent) 85%, black) !important; }
     .bg-primary-20 { background-color: color-mix(in srgb, var(--theme-primary) 20%, transparent) !important; }
@@ -1142,9 +1145,9 @@ const App = () => {
       color: inherit;
       font-size: var(--fluid-base);
     }
-    .rte-content h1 { font-family: var(--font-ui) !important; font-size: var(--fluid-h1); font-weight: 800; margin-bottom: 1.5rem; margin-top: 2rem; letter-spacing: -0.02em; color: inherit; line-height: 1.2; }
-    .rte-content h2 { font-family: var(--font-ui) !important; font-size: var(--fluid-h2); font-weight: 700; margin-bottom: 1rem; margin-top: 2rem; letter-spacing: -0.01em; color: inherit; line-height: 1.25; }
-    .rte-content h3 { font-family: var(--font-ui) !important; font-size: var(--fluid-h3); font-weight: 600; margin-bottom: 0.75rem; margin-top: 1.5rem; color: inherit; line-height: 1.3; }
+    .rte-content h1 { font-family: var(--font-heading) !important; font-size: var(--fluid-h1); font-weight: 800; margin-bottom: 1.5rem; margin-top: 2rem; letter-spacing: -0.02em; color: inherit; line-height: 1.2; }
+    .rte-content h2 { font-family: var(--font-heading) !important; font-size: var(--fluid-h2); font-weight: 700; margin-bottom: 1rem; margin-top: 2rem; letter-spacing: -0.01em; color: inherit; line-height: 1.25; }
+    .rte-content h3 { font-family: var(--font-heading) !important; font-size: var(--fluid-h3); font-weight: 600; margin-bottom: 0.75rem; margin-top: 1.5rem; color: inherit; line-height: 1.3; }
     .rte-content blockquote { border-left: 3px solid var(--theme-accent); padding: 1rem 1.5rem; margin: 2rem 0; font-style: italic; color: inherit; opacity: 0.8; background-color: transparent; }
     .rte-content p { margin-bottom: 1.5rem; }
     .rte-content ul { list-style-type: disc; margin-left: 1.5rem; margin-bottom: 1.5rem; }
@@ -1204,7 +1207,7 @@ const App = () => {
                 <button onClick={() => setSidebarOpen(!isSidebarOpen)} className={`p-2 -ml-2 mb-4 text-zinc-500 hover:bg-zinc-200/50 rounded-full transition-colors ${isSidebarOpen ? 'md:hidden' : ''}`}>
                   <Menu size={24} />
                 </button>
-                <h1 className="fluid-greeting font-extrabold text-zinc-900 tracking-tight">{greeting}.</h1>
+                <h1 className="fluid-greeting font-heading font-extrabold text-zinc-900 tracking-tight">{greeting}.</h1>
                 <p className="text-lg text-zinc-600 font-medium">Ready to capture your thoughts today?</p>
               </div>
 
@@ -1212,7 +1215,7 @@ const App = () => {
                 <button onClick={() => { handleCreateEntry(); setShowMobileDetail(true); }} className="p-6 bg-[color:var(--theme-primary)] hover:bg-primary-dark text-white rounded-3xl transition-all hover:shadow-xl hover:-translate-y-1 duration-300 text-left group shadow-lg flex flex-col justify-between min-h-[140px]">
                   <div className="p-3 bg-white/10 rounded-2xl w-max group-hover:bg-white/20 transition-colors"><Plus size={24} /></div>
                   <div>
-                    <h3 className="font-bold text-xl">New Reflection</h3>
+                    <h3 className="font-heading font-bold text-xl">New Reflection</h3>
                     <p className="opacity-70 text-sm mt-1">Write in {activeJournal?.name || 'your vault'}</p>
                   </div>
                 </button>
@@ -1221,14 +1224,14 @@ const App = () => {
                   <div className="p-6 bg-white border border-zinc-100 rounded-3xl flex flex-col justify-between shadow-sm">
                     <Book size={24} className="text-[color:var(--theme-accent)] mb-4" />
                     <div>
-                      <h3 className="font-bold text-2xl text-zinc-900">{journals.length}</h3>
+                      <h3 className="font-heading font-bold text-2xl text-zinc-900">{journals.length}</h3>
                       <p className="text-zinc-500 text-sm font-medium">Active Journals</p>
                     </div>
                   </div>
                   <div className="p-6 bg-white border border-zinc-100 rounded-3xl flex flex-col justify-between shadow-sm">
                     <FileText size={24} className="text-[color:var(--theme-primary)] mb-4" />
                     <div>
-                      <h3 className="font-bold text-2xl text-zinc-900">{entries.length}</h3>
+                      <h3 className="font-heading font-bold text-2xl text-zinc-900">{entries.length}</h3>
                       <p className="text-zinc-500 text-sm font-medium">Total Memories</p>
                     </div>
                   </div>
@@ -1237,7 +1240,7 @@ const App = () => {
 
               {recentEntries.length > 0 && (
                 <div className="space-y-4">
-                  <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400">Recent Memories</h3>
+                  <h3 className="font-heading text-sm font-bold uppercase tracking-widest text-zinc-400">Recent Memories</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {recentEntries.map(entry => {
                       const journal = journals.find(j => j.id === entry.journalId);
@@ -1259,7 +1262,7 @@ const App = () => {
                             </span>
                             <div className="w-2 h-2 rounded-full shadow-sm" style={{ backgroundColor: journal?.color || 'var(--theme-primary)' }} />
                           </div>
-                          <h4 className="font-bold text-zinc-900 mb-2 line-clamp-2 group-hover:text-[color:var(--theme-accent)] transition-colors pr-6">{entry.title || 'Untitled Entry'}</h4>
+                          <h4 className="font-heading font-bold text-zinc-900 mb-2 line-clamp-2 group-hover:text-[color:var(--theme-accent)] transition-colors pr-6">{entry.title || 'Untitled Entry'}</h4>
                           <p className="text-sm text-zinc-500 line-clamp-2 mt-auto leading-relaxed">{entry.content ? entry.content.replace(/<[^>]+>/g, '') : 'Empty entry...'}</p>
                         </button>
                       )
@@ -1290,7 +1293,7 @@ const App = () => {
             </div>
             <div className="flex flex-col items-center justify-center flex-1 min-h-[400px]">
               <Calendar size={64} className="text-zinc-300 mb-4" />
-              <h2 className="text-2xl font-bold text-zinc-800">{today.toLocaleString('default', { month: 'long', year: 'numeric' })}</h2>
+              <h2 className="font-heading text-2xl font-bold text-zinc-800">{today.toLocaleString('default', { month: 'long', year: 'numeric' })}</h2>
               <p className="text-zinc-500 max-w-sm text-center mt-2">Browse your memories chronologically.</p>
               <div className="mt-8 grid grid-cols-7 gap-2 w-full max-w-md bg-white p-6 rounded-3xl shadow-sm border border-zinc-100">
                 {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
@@ -1358,7 +1361,7 @@ const App = () => {
                   <div className="space-y-4 max-w-[65ch] mx-auto">
                     <input 
                       type="text" 
-                      className="w-full fluid-title font-extrabold tracking-tight text-zinc-900 border-none outline-none placeholder-zinc-300 bg-transparent text-center"
+                      className="w-full fluid-title font-heading font-extrabold tracking-tight text-zinc-900 border-none outline-none placeholder-zinc-300 bg-transparent text-center"
                       value={selectedTemplate.name || ''}
                       onChange={(e) => {
                         const updated = templates.map(t => t.id === selectedTemplate.id ? { ...t, name: e.target.value } : t);
@@ -1399,7 +1402,7 @@ const App = () => {
               </div>
               <div className="flex items-center gap-4 mb-8">
                 <div className="p-3 bg-white shadow-sm rounded-2xl text-[color:var(--theme-primary)] shrink-0 border border-zinc-100"><Settings size={28} /></div>
-                <h2 className="text-3xl font-extrabold text-zinc-900">System Settings</h2>
+                <h2 className="font-heading text-3xl font-extrabold text-zinc-900">System Settings</h2>
               </div>
               
               <div className="space-y-8 pb-12">
@@ -1408,7 +1411,7 @@ const App = () => {
                 <section className="p-6 border border-zinc-100 shadow-sm rounded-3xl bg-white">
                   <div className="flex items-center gap-2 mb-4">
                     <Lock size={20} className="text-[color:var(--theme-primary)]" />
-                    <h3 className="font-bold text-lg text-zinc-900">Security & Access</h3>
+                    <h3 className="font-heading font-bold text-lg text-zinc-900">Security & Access</h3>
                   </div>
                   
                   <div className="space-y-4 mb-6">
@@ -1470,7 +1473,7 @@ const App = () => {
                 {/* THEMING */}
                 <section className="p-6 border border-zinc-100 shadow-sm rounded-3xl bg-white">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 border-b border-zinc-100 pb-4 gap-4">
-                    <div className="flex items-center gap-2"><Palette size={20} className="text-[color:var(--theme-primary)]" /><h3 className="font-bold text-lg text-zinc-900">App Theming</h3></div>
+                    <div className="flex items-center gap-2"><Palette size={20} className="text-[color:var(--theme-primary)]" /><h3 className="font-heading font-bold text-lg text-zinc-900">App Theming</h3></div>
                     <button onClick={() => setThemeConfig(DEFAULT_THEME)} className="text-xs font-bold text-zinc-500 hover:text-zinc-900 px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors self-start sm:self-auto shrink-0">Restore Defaults</button>
                   </div>
 
@@ -1537,7 +1540,7 @@ const App = () => {
                 <section className="p-6 border border-accent-20 rounded-3xl bg-accent-5">
                   <div className="flex items-center gap-2 mb-4">
                     {isDriveConnected ? <Cloud size={20} className="text-[color:var(--theme-accent)]" /> : <CloudOff size={20} className="text-[color:var(--theme-accent)]" />}
-                    <h3 className="font-bold text-lg text-[color:var(--theme-accent)]">Cloud Sync & Encryption</h3>
+                    <h3 className="font-heading font-bold text-lg text-[color:var(--theme-accent)]">Cloud Sync & Encryption</h3>
                   </div>
                   
                   <div className="space-y-4 mb-6">
@@ -1604,26 +1607,26 @@ const App = () => {
                 <button onClick={() => setSidebarOpen(!isSidebarOpen)} className={`p-2 -ml-2 text-zinc-500 hover:bg-white hover:shadow-sm rounded-full transition-all ${isSidebarOpen ? 'md:hidden' : ''}`}><Menu size={24} /></button>
                 <button onClick={() => { setActiveView('home'); setTagFilter(null); setArchiveFilter(null); setShowMobileDetail(false); }} className="text-zinc-500 hover:text-zinc-900 flex items-center gap-2 font-semibold transition-colors"><Home size={20} /> <span className="hidden sm:inline">Home</span></button>
               </div>
-              <h2 className="text-3xl font-extrabold text-zinc-900 mb-8">Life Analytics</h2>
+              <h2 className="font-heading text-3xl font-extrabold text-zinc-900 mb-8">Life Analytics</h2>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                 <div className="p-6 bg-white border border-zinc-100 shadow-sm rounded-3xl">
-                  <h4 className="text-sm font-bold text-zinc-400 uppercase tracking-widest mb-2">Total Memories</h4>
-                  <div className="text-4xl font-extrabold text-[color:var(--theme-primary)]">{totalEntries}</div>
+                  <h4 className="font-heading text-sm font-bold text-zinc-400 uppercase tracking-widest mb-2">Total Memories</h4>
+                  <div className="font-heading text-4xl font-extrabold text-[color:var(--theme-primary)]">{totalEntries}</div>
                 </div>
                 <div className="p-6 bg-white border border-zinc-100 shadow-sm rounded-3xl">
-                  <h4 className="text-sm font-bold text-zinc-400 uppercase tracking-widest mb-2">Most Frequent Mood</h4>
-                  <div className="text-2xl font-bold text-[color:var(--theme-accent)] capitalize">{Object.keys(moodCounts).sort((a,b) => moodCounts[b] - moodCounts[a])[0] || 'Neutral'}</div>
+                  <h4 className="font-heading text-sm font-bold text-zinc-400 uppercase tracking-widest mb-2">Most Frequent Mood</h4>
+                  <div className="font-heading text-2xl font-bold text-[color:var(--theme-accent)] capitalize">{Object.keys(moodCounts).sort((a,b) => moodCounts[b] - moodCounts[a])[0] || 'Neutral'}</div>
                 </div>
                 <div className="p-6 bg-white border border-zinc-100 shadow-sm rounded-3xl">
-                  <h4 className="text-sm font-bold text-zinc-400 uppercase tracking-widest mb-2">Active Journals</h4>
-                  <div className="text-4xl font-extrabold text-zinc-900">{journals.length}</div>
+                  <h4 className="font-heading text-sm font-bold text-zinc-400 uppercase tracking-widest mb-2">Active Journals</h4>
+                  <div className="font-heading text-4xl font-extrabold text-zinc-900">{journals.length}</div>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="p-6 bg-white rounded-3xl shadow-sm border border-zinc-100">
-                  <h4 className="text-sm font-bold text-[color:var(--theme-primary)] mb-4 uppercase tracking-widest">Consistency Heatmap (Last 50 Days)</h4>
+                  <h4 className="font-heading text-sm font-bold text-[color:var(--theme-primary)] mb-4 uppercase tracking-widest">Consistency Heatmap (Last 50 Days)</h4>
                   <div className="flex gap-1 flex-wrap">
                     {heatmap.map((hasEntry, i) => (
                       <div key={i} className={`w-3 h-3 rounded-sm ${hasEntry ? 'bg-[color:var(--theme-primary)]' : 'bg-zinc-100'}`} title={hasEntry ? 'Entry logged' : 'No entry'} />
@@ -1631,7 +1634,7 @@ const App = () => {
                   </div>
                 </div>
                 <div className="p-6 bg-white rounded-3xl shadow-sm border border-zinc-100">
-                  <h4 className="text-sm font-bold text-zinc-400 mb-4 uppercase tracking-widest">Sentiment Mix</h4>
+                  <h4 className="font-heading text-sm font-bold text-zinc-400 mb-4 uppercase tracking-widest">Sentiment Mix</h4>
                   <div className="h-4 w-full flex rounded-full overflow-hidden mb-3">
                     {pPositive > 0 && <div className="h-full bg-[color:var(--theme-primary)]" style={{ width: `${pPositive}%` }} title="Positive" />}
                     {pNeutral > 0 && <div className="h-full bg-zinc-300" style={{ width: `${pNeutral}%` }} title="Neutral" />}
@@ -1726,7 +1729,7 @@ const App = () => {
                   <div className="space-y-6 mb-8 max-w-[65ch] mx-auto">
                     <input 
                       type="text" 
-                      className="w-full fluid-title font-extrabold tracking-tight text-zinc-900 border-none outline-none placeholder-zinc-300 bg-transparent text-center" 
+                      className="w-full fluid-title font-heading font-extrabold tracking-tight text-zinc-900 border-none outline-none placeholder-zinc-300 bg-transparent text-center" 
                       value={selectedEntry.title || ''} 
                       onChange={(e) => { const updated = entries.map(ent => ent.id === selectedEntry.id ? { ...ent, title: e.target.value } : ent); setEntries(updated); }} 
                       placeholder="Entry Title" 
@@ -1790,7 +1793,7 @@ const App = () => {
           <div className="w-16 h-16 bg-[color:var(--theme-primary)] rounded-2xl flex items-center justify-center mb-8 shadow-2xl">
             <Lock size={32} className="text-white" />
           </div>
-          <h1 className="text-3xl font-extrabold text-white mb-2 tracking-tight">Vault Locked</h1>
+          <h1 className="font-heading text-3xl font-extrabold text-white mb-2 tracking-tight">Vault Locked</h1>
           <p className="text-zinc-400 mb-8 text-sm">Enter your PIN to access Epektasis.</p>
           
           <form 
@@ -1896,9 +1899,9 @@ const App = () => {
                     {(activeView === 'entries' || activeView === 'bookmarks') ? (
                       <>
                         {isEditingJournalName && activeJournal && activeView !== 'bookmarks' ? (
-                          <input autoFocus value={activeJournal.name || ''} onChange={(e) => { const updated = journals.map(j => j.id === activeJournal.id ? { ...j, name: e.target.value } : j); setJournals(updated); setActiveJournal(updated.find(j => j.id === activeJournal.id)); }} onBlur={() => setIsEditingJournalName(false)} onKeyDown={(e) => e.key === 'Enter' && setIsEditingJournalName(false)} className="font-bold text-xl bg-transparent border-b border-zinc-300 outline-none w-full text-zinc-900" />
+                          <input autoFocus value={activeJournal.name || ''} onChange={(e) => { const updated = journals.map(j => j.id === activeJournal.id ? { ...j, name: e.target.value } : j); setJournals(updated); setActiveJournal(updated.find(j => j.id === activeJournal.id)); }} onBlur={() => setIsEditingJournalName(false)} onKeyDown={(e) => e.key === 'Enter' && setIsEditingJournalName(false)} className="font-heading font-bold text-xl bg-transparent border-b border-zinc-300 outline-none w-full text-zinc-900" />
                         ) : (
-                          <h2 className={`font-bold text-xl truncate ${(activeJournal && activeView !== 'bookmarks') ? 'cursor-pointer hover:text-[color:var(--theme-accent)] transition-colors flex items-center gap-2 group' : ''}`} onClick={() => activeJournal && activeView !== 'bookmarks' && setIsEditingJournalName(true)} title={(activeJournal && activeView !== 'bookmarks') ? "Click to rename journal" : "Your entries"}>
+                          <h2 className={`font-heading font-bold text-xl truncate ${(activeJournal && activeView !== 'bookmarks') ? 'cursor-pointer hover:text-[color:var(--theme-accent)] transition-colors flex items-center gap-2 group' : ''}`} onClick={() => activeJournal && activeView !== 'bookmarks' && setIsEditingJournalName(true)} title={(activeJournal && activeView !== 'bookmarks') ? "Click to rename journal" : "Your entries"}>
                             {activeView === 'bookmarks' ? 'Bookmarks' : (activeJournal?.name || 'All Entries')} 
                             {activeJournal && activeView !== 'bookmarks' && <Edit2 size={12} className="opacity-0 group-hover:opacity-100 text-zinc-400" />}
                           </h2>
@@ -1911,7 +1914,7 @@ const App = () => {
                           </span>
                         )}
                       </>
-                    ) : ( <h2 className="font-bold text-xl truncate">Saved Templates</h2> )}
+                    ) : ( <h2 className="font-heading font-bold text-xl truncate">Saved Templates</h2> )}
                   </div>
                   <div className="flex items-center gap-0.5 shrink-0">
                     <button onClick={() => { setActiveView('home'); setArchiveFilter(null); setTagFilter(null); setShowMobileDetail(false); }} className="p-1.5 hover:bg-white rounded-md transition-colors text-zinc-400 hover:text-zinc-900 hover:shadow-sm" title="Go Home"><Home size={16} /></button>
@@ -1962,7 +1965,7 @@ const App = () => {
                           
                           <div className="flex-1 min-w-0 pr-4">
                             <div className="flex items-center gap-2 mb-1.5">
-                              <h3 className={`font-bold text-base leading-tight truncate ${isSelected ? 'text-[color:var(--theme-primary)]' : 'text-zinc-800'}`}>{entry.title || 'Untitled Entry'}</h3>
+                              <h3 className={`font-heading font-bold text-base leading-tight truncate ${isSelected ? 'text-[color:var(--theme-primary)]' : 'text-zinc-800'}`}>{entry.title || 'Untitled Entry'}</h3>
                               <EntryMoodIcon size={14} className={`shrink-0 ${entryMoodObj.color}`} />
                             </div>
                             <p className="text-xs text-zinc-500 line-clamp-2 leading-relaxed">{entry.content ? entry.content.replace(/<[^>]+>/g, '').substring(0, 100) : 'Empty entry...'}</p>
@@ -1996,7 +1999,7 @@ const App = () => {
                           <LayoutTemplate size={20} className={isSelected ? 'text-[color:var(--theme-primary)]' : 'text-zinc-400'} />
                         </div>
                         <div className="flex-1 min-w-0 pr-2">
-                          <h3 className={`font-bold text-base mb-1.5 leading-tight ${isSelected ? 'text-[color:var(--theme-primary)]' : 'text-zinc-800'}`}>{template.name || 'Untitled Template'}</h3>
+                          <h3 className={`font-heading font-bold text-base mb-1.5 leading-tight ${isSelected ? 'text-[color:var(--theme-primary)]' : 'text-zinc-800'}`}>{template.name || 'Untitled Template'}</h3>
                           <p className="text-xs text-zinc-500 line-clamp-2 leading-relaxed">{template.content ? template.content.replace(/<[^>]+>/g, '').substring(0, 100) : 'Empty template...'}</p>
                         </div>
                       </button>
@@ -2020,13 +2023,13 @@ const App = () => {
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/40 backdrop-blur-sm animate-in fade-in duration-200">
               <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-200 mx-4 flex flex-col max-h-[80vh]">
                 <div className="flex justify-between items-center mb-6 shrink-0 border-b border-zinc-100 pb-4">
-                  <div className="flex items-center gap-3"><div className="p-2 bg-[color:var(--theme-primary)] rounded-xl text-white shadow-sm"><LayoutTemplate size={18} /></div><h3 className="font-bold text-lg text-zinc-900">Insert Template</h3></div>
+                  <div className="flex items-center gap-3"><div className="p-2 bg-[color:var(--theme-primary)] rounded-xl text-white shadow-sm"><LayoutTemplate size={18} /></div><h3 className="font-heading font-bold text-lg text-zinc-900">Insert Template</h3></div>
                   <button onClick={() => setShowTemplatePicker(false)} className="p-1 hover:bg-zinc-100 rounded-full text-zinc-500 transition-colors"><X size={20} /></button>
                 </div>
                 <div className="space-y-3 overflow-y-auto custom-scrollbar pr-2 flex-1">
                   {templates.map(t => (
                     <button key={t.id} onClick={() => applyTemplateToEntry(t)} className="w-full text-left p-4 rounded-2xl border border-zinc-200 hover:border-[color:var(--theme-primary)] hover:shadow-md hover:-translate-y-0.5 transition-all bg-zinc-50 hover:bg-white group">
-                      <h4 className="font-bold text-zinc-800 group-hover:text-[color:var(--theme-primary)]">{t.name}</h4>
+                      <h4 className="font-heading font-bold text-zinc-800 group-hover:text-[color:var(--theme-primary)]">{t.name}</h4>
                       <p className="text-xs text-zinc-500 line-clamp-2 mt-1">{t.content.replace(/<[^>]+>/g, '')}</p>
                     </button>
                   ))}
@@ -2042,7 +2045,7 @@ const App = () => {
       {modalConfig && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-zinc-900/60 backdrop-blur-md animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200 mx-4 border border-zinc-100">
-            <h3 className="font-bold text-lg mb-2 text-zinc-900">{modalConfig.title || 'Attention'}</h3>
+            <h3 className="font-heading font-bold text-lg mb-2 text-zinc-900">{modalConfig.title || 'Attention'}</h3>
             <p className="text-zinc-600 mb-6 text-sm leading-relaxed">{modalConfig.message}</p>
             <div className="flex justify-end gap-3">
               {modalConfig.type === 'confirm' && <button onClick={() => setModalConfig(null)} className="px-4 py-2 rounded-xl text-sm font-semibold text-zinc-600 hover:bg-zinc-100 transition-colors">Cancel</button>}
