@@ -6,7 +6,7 @@ import {
   X, CheckCircle2, AlertCircle, Menu, Download, Lock, Unlock, LogOut, Share2, History, ChevronDown,
   Edit2, Bold, Italic, Underline, Heading1, Heading2, Heading3, List, ListOrdered,
   ImagePlus, AlignLeft, AlignCenter, AlignRight, LayoutTemplate, Palette, Hash, 
-  Cloud, CloudOff, Highlighter, Type, HelpCircle
+  Cloud, CloudOff, Highlighter, Type, HelpCircle, Quote
 } from 'lucide-react';
 
 /**
@@ -166,6 +166,36 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
   const exec = (command, value = null) => {
     restoreSelection();
     document.execCommand(command, false, value);
+    saveSelection();
+    onChange(editorRef.current?.innerHTML || '');
+  };
+
+  const toggleFormatBlock = (tag) => {
+    restoreSelection();
+    let node = window.getSelection().anchorNode;
+    let isActive = false;
+    
+    // Check if our cursor is currently inside the tag we are toggling
+    while (node && node !== editorRef.current) {
+      if (node && node.nodeName === tag.toUpperCase()) {
+        isActive = true;
+        break;
+      }
+      node = node ? node.parentNode : null;
+    }
+    
+    // If we are in it, escape it. Otherwise, apply the tag.
+    if (isActive) {
+      if (tag.toUpperCase() === 'BLOCKQUOTE') {
+        // Browsers require 'outdent' to escape blockquotes instead of 'formatBlock'
+        document.execCommand('outdent', false, null);
+      } else {
+        document.execCommand('formatBlock', false, 'P');
+      }
+    } else {
+      document.execCommand('formatBlock', false, tag);
+    }
+    
     saveSelection();
     onChange(editorRef.current?.innerHTML || '');
   };
@@ -469,6 +499,7 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
             <ToolbarButton icon={Heading2} onClick={() => exec('formatBlock', 'H2')} title="Heading 2" />
             <ToolbarButton icon={Heading3} onClick={() => exec('formatBlock', 'H3')} title="Heading 3" />
             <div className="w-px h-4 bg-zinc-300 mx-1" />
+            <ToolbarButton icon={Quote} onClick={() => toggleFormatBlock('BLOCKQUOTE')} title="Blockquote" />
             <ToolbarButton icon={List} onClick={() => exec('insertUnorderedList')} title="Bullet List" />
             <ToolbarButton icon={ListOrdered} onClick={() => exec('insertOrderedList')} title="Numbered List" />
             <div className="w-px h-4 bg-zinc-300 mx-1" />
@@ -494,7 +525,14 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
             </button>
             <button 
               onMouseDown={(e) => e.preventDefault()}
-              onClick={() => exec('formatBlock', 'P')} 
+              onClick={() => {
+                restoreSelection();
+                // Force escape from quotes or lists
+                document.execCommand('outdent', false, null);
+                document.execCommand('formatBlock', false, 'P');
+                saveSelection();
+                onChange(editorRef.current?.innerHTML || '');
+              }} 
               className="text-xs font-bold text-zinc-500 hover:bg-zinc-200 px-2 py-1 rounded transition-colors ml-auto"
             >
               Paragraph
@@ -512,7 +550,7 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
           setTimeout(() => setSelectedImage(null), 150);
         }}
         onKeyUp={saveSelection}
-        className="p-6 h-[50vh] min-h-[400px] overflow-y-auto custom-scrollbar outline-none rte-content font-serif text-lg leading-relaxed text-zinc-700 bg-white"
+        className="p-6 h-[65vh] min-h-[500px] overflow-y-auto custom-scrollbar outline-none rte-content font-serif text-lg leading-relaxed text-zinc-700 bg-white"
         placeholder="Begin your reflection..."
       />
     </div>
@@ -1077,6 +1115,7 @@ const App = () => {
     .rte-content h1 { font-family: var(--font-ui) !important; font-size: 2.25rem; font-weight: 800; margin-bottom: 1rem; margin-top: 1.5rem; line-height: 1.2; color: #111; }
     .rte-content h2 { font-family: var(--font-ui) !important; font-size: 1.875rem; font-weight: 700; margin-bottom: 0.75rem; margin-top: 1.5rem; line-height: 1.25; color: #111; }
     .rte-content h3 { font-family: var(--font-ui) !important; font-size: 1.5rem; font-weight: 600; margin-bottom: 0.75rem; margin-top: 1.25rem; line-height: 1.3; color: #222; }
+    .rte-content blockquote { border-left: 4px solid var(--theme-accent); padding: 0.75rem 1rem; margin: 1.5rem 0; font-style: italic; color: #555; background-color: color-mix(in srgb, var(--theme-accent) 5%, transparent); border-radius: 0 0.5rem 0.5rem 0; }
     .rte-content p { margin-bottom: 1rem; }
     .rte-content ul { list-style-type: disc; margin-left: 1.5rem; margin-bottom: 1rem; }
     .rte-content ol { list-style-type: decimal; margin-left: 1.5rem; margin-bottom: 1rem; }
