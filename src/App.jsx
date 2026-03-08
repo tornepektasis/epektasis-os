@@ -550,7 +550,7 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
           setTimeout(() => setSelectedImage(null), 150);
         }}
         onKeyUp={saveSelection}
-        className="p-6 h-[65vh] min-h-[500px] overflow-y-auto custom-scrollbar outline-none rte-content font-serif text-lg leading-relaxed text-zinc-700 bg-white"
+        className="p-6 min-h-[500px] md:h-[65vh] md:overflow-y-auto custom-scrollbar outline-none rte-content font-serif text-lg leading-relaxed text-zinc-700 bg-white"
         placeholder="Begin your reflection..."
       />
     </div>
