@@ -13,10 +13,10 @@ import {
  * Epektasis Theme Defaults
  */
 const DEFAULT_THEME = {
-  primary: '#00471B',    // Good Land Green
-  secondary: '#EEE1C6',  // Cream City Cream
-  accent: '#0077C0',     // Great Lakes Blue
-  sidebarText: '#ffffff',// Sidebar Font Base
+  primary: '#3B5741',
+  secondary: '#F6E7D1',
+  accent: '#637C8B',
+  sidebarText: '#F0F0F0',
   uiFont: 'Inter',
   docFont: 'Charter'
 };
