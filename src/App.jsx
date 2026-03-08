@@ -371,8 +371,8 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
   );
 
   return (
-    <div className="flex flex-col border border-zinc-200 rounded-2xl overflow-hidden bg-white shadow-sm mt-4">
-      <div className="flex flex-wrap items-center gap-1 p-2 border-b border-zinc-100 bg-zinc-50 min-h-[44px]">
+    <div className="flex flex-col border-2 border-[color:var(--theme-secondary)] rounded-2xl overflow-hidden bg-white shadow-sm mt-4">
+      <div className="flex flex-wrap items-center gap-1 p-2 border-b border-[color:var(--theme-secondary)] bg-zinc-50 min-h-[44px]">
         {selectedImage ? (
           <div className="flex items-center gap-2 px-2 animate-in fade-in duration-200 w-full overflow-x-auto pb-1">
             <span className="text-[10px] font-bold text-[color:var(--theme-primary)] uppercase tracking-wider mr-1 shrink-0">Resize:</span>
@@ -512,7 +512,7 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
           setTimeout(() => setSelectedImage(null), 150);
         }}
         onKeyUp={saveSelection}
-        className="p-6 min-h-[500px] outline-none rte-content font-serif text-lg leading-relaxed text-zinc-700 bg-white"
+        className="p-6 h-[50vh] min-h-[400px] overflow-y-auto custom-scrollbar outline-none rte-content font-serif text-lg leading-relaxed text-zinc-700 bg-white"
         placeholder="Begin your reflection..."
       />
     </div>
