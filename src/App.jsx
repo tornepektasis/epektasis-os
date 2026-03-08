@@ -401,7 +401,7 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
   );
 
   return (
-    <div className="flex flex-col border-2 border-[color:var(--theme-secondary)] rounded-2xl overflow-hidden bg-white shadow-sm mt-4">
+    <div className="flex flex-col border-2 border-[color:var(--theme-secondary)] rounded-2xl overflow-hidden bg-white shadow-sm mt-2 md:mt-4">
       <div className="flex flex-wrap items-center gap-1 p-2 border-b border-[color:var(--theme-secondary)] bg-zinc-50 min-h-[44px]">
         {selectedImage ? (
           <div className="flex items-center gap-2 px-2 animate-in fade-in duration-200 w-full overflow-x-auto pb-1">
@@ -550,7 +550,7 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
           setTimeout(() => setSelectedImage(null), 150);
         }}
         onKeyUp={saveSelection}
-        className="p-6 min-h-[500px] md:h-[65vh] md:overflow-y-auto custom-scrollbar outline-none rte-content font-serif text-lg leading-relaxed text-zinc-700 bg-white"
+        className="p-4 md:p-6 min-h-[500px] md:h-[65vh] md:overflow-y-auto custom-scrollbar outline-none rte-content font-serif text-lg leading-relaxed text-zinc-700 bg-white"
         placeholder="Begin your reflection..."
       />
     </div>
@@ -1228,7 +1228,7 @@ const App = () => {
               </button>
             </div>
             <div className="flex flex-col items-center justify-center flex-1 min-h-[400px]">
-              <Calendar size={64} className="text-[#EEE1C6] mb-4" />
+              <Calendar size={64} className="text-[color:var(--theme-secondary)] mb-4" />
               <h2 className="text-2xl font-bold text-zinc-800">{today.toLocaleString('default', { month: 'long', year: 'numeric' })}</h2>
               <p className="text-zinc-500 max-w-sm text-center mt-2">Browse your memories chronologically.</p>
               <div className="mt-8 grid grid-cols-7 gap-2 w-full max-w-md">
@@ -1256,13 +1256,13 @@ const App = () => {
                         }
                       }}
                       className={`aspect-square rounded-lg border flex flex-col items-center justify-center text-xs font-bold transition-all relative
-                        ${isToday ? 'bg-[#00471B] text-white ring-4 ring-[#EEE1C6]' : 'bg-white text-zinc-700 hover:bg-zinc-50'}
-                        ${hasEntry && !isToday ? 'border-[#0077C0] cursor-pointer' : 'border-zinc-200'}
+                        ${isToday ? 'bg-[color:var(--theme-primary)] text-[color:var(--theme-sidebar-text)] ring-4 ring-[color:var(--theme-secondary)]' : 'bg-white text-zinc-700 hover:bg-zinc-50'}
+                        ${hasEntry && !isToday ? 'border-[color:var(--theme-accent)] cursor-pointer' : 'border-zinc-200'}
                         ${!hasEntry && !isToday ? 'cursor-default' : ''}
                       `}
                     >
                       {day}
-                      {hasEntry && !isToday && <div className="w-1.5 h-1.5 rounded-full bg-[#0077C0] absolute bottom-2" />}
+                      {hasEntry && !isToday && <div className="w-1.5 h-1.5 rounded-full bg-[color:var(--theme-accent)] absolute bottom-2" />}
                       {hasEntry && isToday && <div className="w-1.5 h-1.5 rounded-full bg-white absolute bottom-2" />}
                     </button>
                   );
@@ -1287,7 +1287,7 @@ const App = () => {
                 <button onClick={() => handleDeleteTemplate(selectedTemplate.id)} className="p-2 text-zinc-400 hover:bg-red-50 hover:text-red-600 rounded-full transition-all" disabled={!selectedTemplate}><Trash2 size={18} /></button>
               </div>
             </header>
-            <div className="flex-1 overflow-y-auto px-8 pt-12 pb-32 md:pb-[40vh] flex justify-center custom-scrollbar bg-[#F8F9FA]/30">
+            <div className="flex-1 overflow-y-auto px-3 md:px-8 pt-6 md:pt-12 pb-32 md:pb-[40vh] flex justify-center custom-scrollbar bg-[#F8F9FA]/30">
               {selectedTemplate ? (
                 <div className="max-w-3xl w-full space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                   <div className="space-y-4">
@@ -1625,7 +1625,7 @@ const App = () => {
               </div>
             </header>
 
-            <div className="flex-1 overflow-y-auto px-8 pt-12 pb-32 md:pb-[40vh] flex justify-center custom-scrollbar bg-[#F8F9FA]/30">
+            <div className="flex-1 overflow-y-auto px-3 md:px-8 pt-6 md:pt-12 pb-32 md:pb-[40vh] flex justify-center custom-scrollbar bg-[#F8F9FA]/30">
               {selectedEntry ? (
                 <div className="max-w-3xl w-full space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                   <div className="space-y-4">
