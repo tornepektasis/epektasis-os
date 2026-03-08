@@ -17,13 +17,13 @@ import {
 } from 'lucide-react';
 
 /**
- * Epektasis Theme Defaults
+ * Epektasis Theme Defaults - Premium, grounded feel
  */
 const DEFAULT_THEME = {
-  primary: '#3B5741',
-  secondary: '#F6E7D1',
-  accent: '#637C8B',
-  sidebarText: '#F0F0F0',
+  primary: '#2C4030',   // Deeper, richer forest green
+  secondary: '#FBF8F1', // Softer, warmer off-white for reduced eye strain
+  accent: '#7B8C98',    // Muted, elegant slate
+  sidebarText: '#EAEAEA',
   uiFont: 'Inter',
   docFont: 'Charter'
 };
@@ -56,7 +56,7 @@ const INITIAL_ENTRIES = [
     createdAt: new Date('2026-02-28T10:30:00'),
     tags: ['philosophy', 'tech'],
     mood: 'serene',
-    isBookmarked: true // Bookmarked by default for demonstration
+    isBookmarked: true
   },
   {
     id: 'e2',
@@ -184,7 +184,6 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
     let node = window.getSelection().anchorNode;
     let isActive = false;
     
-    // Check if our cursor is currently inside the tag we are toggling
     while (node && node !== editorRef.current) {
       if (node && node.nodeName === tag.toUpperCase()) {
         isActive = true;
@@ -193,10 +192,8 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
       node = node ? node.parentNode : null;
     }
     
-    // If we are in it, escape it. Otherwise, apply the tag.
     if (isActive) {
       if (tag.toUpperCase() === 'BLOCKQUOTE') {
-        // Browsers require 'outdent' to escape blockquotes instead of 'formatBlock'
         document.execCommand('outdent', false, null);
       } else {
         document.execCommand('formatBlock', false, 'P');
@@ -240,7 +237,7 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
     try {
       const metadata = { name: `epektasis_media_${Date.now()}`, mimeType: file.type };
       if (folderId) {
-        metadata.parents = [folderId]; // Save to specific Google Drive Folder!
+        metadata.parents = [folderId]; 
       }
       
       const form = new FormData();
@@ -324,7 +321,6 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
       setSelectedImage(null);
       onChange(editorRef.current.innerHTML);
 
-      // Tell Google Drive to delete the file permanently
       if (imgSrc && accessToken) {
         const match = imgSrc.match(/d\/([a-zA-Z0-9_-]+)/);
         if (match && match[1]) {
@@ -410,8 +406,9 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
   );
 
   return (
-    <div className="flex flex-col border-2 border-[color:var(--theme-secondary)] rounded-2xl overflow-hidden bg-white shadow-sm mt-4">
-      <div className="flex flex-wrap items-center gap-1 p-2 border-b border-[color:var(--theme-secondary)] bg-zinc-50 min-h-[44px]">
+    <div className="flex flex-col border-2 border-[color:var(--theme-secondary)] rounded-2xl overflow-hidden bg-white shadow-sm mt-4 relative z-10">
+      {/* Editor Toolbar: Pill shaped groups for less clutter */}
+      <div className="flex flex-wrap items-center gap-2 p-2 border-b border-[color:var(--theme-secondary)] bg-zinc-50/80 backdrop-blur min-h-[52px]">
         {selectedImage ? (
           <div className="flex items-center gap-2 px-2 animate-in fade-in duration-200 w-full overflow-x-auto pb-1">
             <span className="text-[10px] font-bold text-[color:var(--theme-primary)] uppercase tracking-wider mr-1 shrink-0">Resize:</span>
@@ -435,114 +432,128 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
           </div>
         ) : (
           <>
-            <ToolbarButton icon={Bold} onClick={() => exec('bold')} title="Bold" />
-            <ToolbarButton icon={Italic} onClick={() => exec('italic')} title="Italic" />
-            <ToolbarButton icon={Underline} onClick={() => exec('underline')} title="Underline" />
+            {/* Text Style Group */}
+            <div className="flex items-center gap-0.5 bg-white border border-zinc-200 rounded-lg p-0.5 shadow-sm">
+              <ToolbarButton icon={Bold} onClick={() => exec('bold')} title="Bold" />
+              <ToolbarButton icon={Italic} onClick={() => exec('italic')} title="Italic" />
+              <ToolbarButton icon={Underline} onClick={() => exec('underline')} title="Underline" />
+              
+              <div className="relative flex items-center" ref={highlightMenuRef}>
+                <button
+                  onMouseDown={(e) => { e.preventDefault(); saveSelection(); setShowHighlightMenu(!showHighlightMenu); setShowTextSizeMenu(false); }}
+                  className={`p-1.5 rounded transition-colors ${showHighlightMenu ? 'bg-zinc-200 text-zinc-900' : 'text-zinc-500 hover:bg-zinc-200 hover:text-zinc-900'}`}
+                  title="Highlight Text"
+                >
+                  <Highlighter size={16} />
+                </button>
+                {showHighlightMenu && (
+                  <div className="absolute top-full left-0 mt-2 p-2 bg-white border border-zinc-200 rounded-xl shadow-xl z-50 flex gap-1.5 animate-in fade-in zoom-in-95 w-max">
+                    {[
+                      { label: 'Yellow', color: '#fef08a' },
+                      { label: 'Green', color: '#bbf7d0' },
+                      { label: 'Blue', color: '#bfdbfe' },
+                      { label: 'Pink', color: '#fbcfe8' },
+                      { label: 'Purple', color: '#e9d5ff' },
+                      { label: 'Orange', color: '#fed7aa' },
+                      { label: 'Clear', color: 'transparent', icon: X }
+                    ].map(h => (
+                      <button
+                        key={h.label}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => applyHighlight(h.color)}
+                        className="w-6 h-6 rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-sm border border-black/10"
+                        style={{ backgroundColor: h.color === 'transparent' ? '#f4f4f5' : h.color }}
+                        title={h.label}
+                      >
+                        {h.color === 'transparent' && <h.icon size={12} className="text-zinc-500" />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="relative flex items-center" ref={textSizeMenuRef}>
+                <button
+                  onMouseDown={(e) => { e.preventDefault(); saveSelection(); setShowTextSizeMenu(!showTextSizeMenu); setShowHighlightMenu(false); }}
+                  className={`p-1.5 rounded transition-colors ${showTextSizeMenu ? 'bg-zinc-200 text-zinc-900' : 'text-zinc-500 hover:bg-zinc-200 hover:text-zinc-900'}`}
+                  title="Text Size"
+                >
+                  <Type size={16} />
+                </button>
+                {showTextSizeMenu && (
+                  <div className="absolute top-full left-0 mt-2 p-2 bg-white border border-zinc-200 rounded-xl shadow-xl z-50 flex flex-col gap-1 animate-in fade-in zoom-in-95 w-32">
+                    {[
+                      { label: 'Small', size: '2', className: 'text-sm' },
+                      { label: 'Normal', size: '3', className: 'text-base' },
+                      { label: 'Large', size: '4', className: 'text-lg' },
+                      { label: 'Huge', size: '5', className: 'text-xl' },
+                      { label: 'Giant', size: '6', className: 'text-2xl' }
+                    ].map(s => (
+                      <button
+                        key={s.label}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => applyFontSize(s.size)}
+                        className={`w-full text-left px-3 py-1.5 rounded-lg hover:bg-zinc-100 transition-colors text-zinc-700 font-medium ${s.className}`}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Headings Group */}
+            <div className="flex items-center gap-0.5 bg-white border border-zinc-200 rounded-lg p-0.5 shadow-sm">
+              <ToolbarButton icon={Heading1} onClick={() => exec('formatBlock', 'H1')} title="Heading 1" />
+              <ToolbarButton icon={Heading2} onClick={() => exec('formatBlock', 'H2')} title="Heading 2" />
+              <ToolbarButton icon={Heading3} onClick={() => exec('formatBlock', 'H3')} title="Heading 3" />
+            </div>
             
-            <div className="relative flex items-center" ref={highlightMenuRef}>
-              <button
-                onMouseDown={(e) => { e.preventDefault(); saveSelection(); setShowHighlightMenu(!showHighlightMenu); setShowTextSizeMenu(false); }}
-                className={`p-1.5 rounded transition-colors ml-0.5 ${showHighlightMenu ? 'bg-zinc-200 text-zinc-900' : 'text-zinc-500 hover:bg-zinc-200 hover:text-zinc-900'}`}
-                title="Highlight Text"
-              >
-                <Highlighter size={16} />
-              </button>
-              {showHighlightMenu && (
-                <div className="absolute top-full left-0 mt-1 p-2 bg-white border border-zinc-200 rounded-xl shadow-xl z-50 flex gap-1.5 animate-in fade-in zoom-in-95 w-max">
-                  {[
-                    { label: 'Yellow', color: '#fef08a' },
-                    { label: 'Green', color: '#bbf7d0' },
-                    { label: 'Blue', color: '#bfdbfe' },
-                    { label: 'Pink', color: '#fbcfe8' },
-                    { label: 'Purple', color: '#e9d5ff' },
-                    { label: 'Orange', color: '#fed7aa' },
-                    { label: 'Clear', color: 'transparent', icon: X }
-                  ].map(h => (
-                    <button
-                      key={h.label}
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => applyHighlight(h.color)}
-                      className="w-6 h-6 rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-sm border border-black/10"
-                      style={{ backgroundColor: h.color === 'transparent' ? '#f4f4f5' : h.color }}
-                      title={h.label}
-                    >
-                      {h.color === 'transparent' && <h.icon size={12} className="text-zinc-500" />}
-                    </button>
-                  ))}
-                </div>
-              )}
+            {/* Lists & Quotes Group */}
+            <div className="flex items-center gap-0.5 bg-white border border-zinc-200 rounded-lg p-0.5 shadow-sm hidden sm:flex">
+              <ToolbarButton icon={Quote} onClick={() => toggleFormatBlock('BLOCKQUOTE')} title="Blockquote" />
+              <ToolbarButton icon={List} onClick={() => exec('insertUnorderedList')} title="Bullet List" />
+              <ToolbarButton icon={ListOrdered} onClick={() => exec('insertOrderedList')} title="Numbered List" />
             </div>
 
-            <div className="relative flex items-center" ref={textSizeMenuRef}>
-              <button
-                onMouseDown={(e) => { e.preventDefault(); saveSelection(); setShowTextSizeMenu(!showTextSizeMenu); setShowHighlightMenu(false); }}
-                className={`p-1.5 rounded transition-colors ml-0.5 ${showTextSizeMenu ? 'bg-zinc-200 text-zinc-900' : 'text-zinc-500 hover:bg-zinc-200 hover:text-zinc-900'}`}
-                title="Text Size"
+            {/* Alignment Group */}
+            <div className="flex items-center gap-0.5 bg-white border border-zinc-200 rounded-lg p-0.5 shadow-sm hidden md:flex">
+              <ToolbarButton icon={AlignLeft} onClick={() => exec('justifyLeft')} title="Align Left" />
+              <ToolbarButton icon={AlignCenter} onClick={() => exec('justifyCenter')} title="Align Center" />
+              <ToolbarButton icon={AlignRight} onClick={() => exec('justifyRight')} title="Align Right" />
+            </div>
+            
+            {/* Action Group */}
+            <div className="flex items-center gap-0.5 bg-white border border-zinc-200 rounded-lg p-0.5 shadow-sm">
+              <label 
+                onMouseDown={(e) => e.preventDefault()}
+                className={`p-1.5 rounded transition-colors ${isUploading ? 'text-[color:var(--theme-accent)] animate-pulse' : 'text-zinc-500 hover:bg-zinc-200 hover:text-zinc-900 cursor-pointer'}`} 
+                title={isUploading ? "Uploading to Cloud..." : "Insert Image"}
               >
-                <Type size={16} />
+                {isUploading ? <Cloud size={16} /> : <ImagePlus size={16} />}
+                <input type="file" accept="image/*" onChange={handleImage} className="hidden" disabled={isUploading} />
+              </label>
+              <button
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={toggleDictation}
+                title={isRecording ? "Stop Dictation" : "Start Dictation"}
+                className={`p-1.5 rounded transition-all ${isRecording ? 'bg-red-100 text-red-600 animate-pulse' : 'text-zinc-500 hover:bg-zinc-200 hover:text-zinc-900'}`}
+              >
+                <Mic size={16} />
               </button>
-              {showTextSizeMenu && (
-                <div className="absolute top-full left-0 mt-1 p-2 bg-white border border-zinc-200 rounded-xl shadow-xl z-50 flex flex-col gap-1 animate-in fade-in zoom-in-95 w-32">
-                  {[
-                    { label: 'Small', size: '2', className: 'text-sm' },
-                    { label: 'Normal', size: '3', className: 'text-base' },
-                    { label: 'Large', size: '4', className: 'text-lg' },
-                    { label: 'Huge', size: '5', className: 'text-xl' },
-                    { label: 'Giant', size: '6', className: 'text-2xl' }
-                  ].map(s => (
-                    <button
-                      key={s.label}
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => applyFontSize(s.size)}
-                      className={`w-full text-left px-3 py-1.5 rounded-lg hover:bg-zinc-100 transition-colors text-zinc-700 font-medium ${s.className}`}
-                    >
-                      {s.label}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
 
-            <div className="w-px h-4 bg-zinc-300 mx-1" />
-            <ToolbarButton icon={Heading1} onClick={() => exec('formatBlock', 'H1')} title="Heading 1" />
-            <ToolbarButton icon={Heading2} onClick={() => exec('formatBlock', 'H2')} title="Heading 2" />
-            <ToolbarButton icon={Heading3} onClick={() => exec('formatBlock', 'H3')} title="Heading 3" />
-            <div className="w-px h-4 bg-zinc-300 mx-1" />
-            <ToolbarButton icon={Quote} onClick={() => toggleFormatBlock('BLOCKQUOTE')} title="Blockquote" />
-            <ToolbarButton icon={List} onClick={() => exec('insertUnorderedList')} title="Bullet List" />
-            <ToolbarButton icon={ListOrdered} onClick={() => exec('insertOrderedList')} title="Numbered List" />
-            <div className="w-px h-4 bg-zinc-300 mx-1" />
-            <ToolbarButton icon={AlignLeft} onClick={() => exec('justifyLeft')} title="Align Left" />
-            <ToolbarButton icon={AlignCenter} onClick={() => exec('justifyCenter')} title="Align Center" />
-            <ToolbarButton icon={AlignRight} onClick={() => exec('justifyRight')} title="Align Right" />
-            <div className="w-px h-4 bg-zinc-300 mx-1" />
-            <label 
-              onMouseDown={(e) => e.preventDefault()}
-              className={`p-1.5 rounded transition-colors ${isUploading ? 'text-[color:var(--theme-accent)] animate-pulse' : 'text-zinc-500 hover:bg-zinc-200 hover:text-zinc-900 cursor-pointer'}`} 
-              title={isUploading ? "Uploading to Cloud..." : "Insert Image"}
-            >
-              {isUploading ? <Cloud size={16} /> : <ImagePlus size={16} />}
-              <input type="file" accept="image/*" onChange={handleImage} className="hidden" disabled={isUploading} />
-            </label>
-            <button
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={toggleDictation}
-              title={isRecording ? "Stop Dictation" : "Start Dictation"}
-              className={`p-1.5 rounded transition-all ml-1 ${isRecording ? 'bg-red-100 text-red-600 animate-pulse' : 'text-zinc-500 hover:bg-zinc-200 hover:text-zinc-900'}`}
-            >
-              <Mic size={16} />
-            </button>
             <button
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => {
                 restoreSelection();
-                // Force escape from quotes or lists
                 document.execCommand('outdent', false, null);
                 document.execCommand('formatBlock', false, 'P');
                 saveSelection();
                 onChange(editorRef.current?.innerHTML || '');
               }} 
-              className="text-xs font-bold text-zinc-500 hover:bg-zinc-200 px-2 py-1 rounded transition-colors ml-auto"
+              className="text-xs font-bold text-zinc-500 hover:bg-white border border-transparent hover:border-zinc-200 hover:shadow-sm px-3 py-1.5 rounded-lg transition-all ml-auto"
             >
               Paragraph
             </button>
@@ -559,7 +570,7 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
           setTimeout(() => setSelectedImage(null), 150);
         }}
         onKeyUp={saveSelection}
-        className="p-6 min-h-[500px] md:h-[65vh] md:overflow-y-auto custom-scrollbar outline-none rte-content font-serif text-lg leading-relaxed text-zinc-700 bg-white"
+        className="px-6 py-8 md:px-12 md:py-16 min-h-[500px] md:h-[65vh] md:overflow-y-auto custom-scrollbar outline-none rte-content font-serif text-lg bg-white"
         placeholder="Begin your reflection..."
       />
     </div>
@@ -610,7 +621,9 @@ const App = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [isTagsExpanded, setIsTagsExpanded] = useState(true);
-  const [isDarkMode, setDarkMode] = useState(false);
+  const [themeMode, setThemeMode] = useState(() => localStorage.getItem('epektasis_theme_mode') || 'light');
+  const [isZenMode, setIsZenMode] = useState(false);
+  const [animateBookmark, setAnimateBookmark] = useState(false);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [isEditingJournalName, setIsEditingJournalName] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -634,7 +647,6 @@ const App = () => {
   const moodMenuRef = useRef(null);
   const syncTimeoutRef = useRef(null);
 
-  // Load Google API Scripts dynamically
   useEffect(() => {
     const loadScript = (src) => {
       return new Promise((resolve, reject) => {
@@ -665,17 +677,16 @@ const App = () => {
     }
   }, []);
 
-  // Save to Local Storage
   useEffect(() => { localStorage.setItem('epektasis_entries', JSON.stringify(entries)); }, [entries]);
   useEffect(() => { localStorage.setItem('epektasis_journals', JSON.stringify(journals)); }, [journals]);
   useEffect(() => { localStorage.setItem('epektasis_templates', JSON.stringify(templates)); }, [templates]);
   useEffect(() => { localStorage.setItem('epektasis_theme', JSON.stringify(themeConfig)); }, [themeConfig]);
+  useEffect(() => { localStorage.setItem('epektasis_theme_mode', themeMode); }, [themeMode]);
   useEffect(() => { localStorage.setItem('epektasis_gclient', googleClientId); }, [googleClientId]);
   useEffect(() => { if (driveFileId) localStorage.setItem('epektasis_fileId', driveFileId); }, [driveFileId]);
   useEffect(() => { if (driveFolderId) localStorage.setItem('epektasis_folderId', driveFolderId); }, [driveFolderId]);
   useEffect(() => { if (lastSynced) localStorage.setItem('epektasis_lastSync', lastSynced); }, [lastSynced]);
 
-  // AUTO-SYNC (Debounced 3s)
   useEffect(() => {
     if (isDriveConnected && driveFileId && accessToken && !isLocked) {
       if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
@@ -701,7 +712,7 @@ const App = () => {
   const selectArchive = (year, month = null) => { 
     setArchiveFilter({ year, month }); 
     setActiveView('entries'); 
-    setActiveJournal(null); // Show all journals for this archive
+    setActiveJournal(null); 
   };
 
   const dynamicArchives = useMemo(() => {
@@ -726,12 +737,8 @@ const App = () => {
 
   const filteredEntries = useMemo(() => {
     return entries.filter(e => {
-      // If we are explicitly in "Bookmarks" view, only show bookmarked entries
       if (activeView === 'bookmarks' && !e.isBookmarked) return false;
-
-      // Regular active journal filtering (ignored if viewing bookmarks, archives, or tags without a journal)
       const matchesJournal = (activeJournal && activeView !== 'bookmarks') ? e.journalId === activeJournal.id : true;
-      
       const lowerQuery = searchQuery.toLowerCase();
       const matchesSearch = e.title.toLowerCase().includes(lowerQuery) || 
                              e.content.toLowerCase().includes(lowerQuery) ||
@@ -751,10 +758,7 @@ const App = () => {
     });
   }, [activeJournal, searchQuery, entries, archiveFilter, tagFilter, activeView]);
 
-  // --- Handlers ---
-
   const handleCreateEntry = () => {
-    // If viewing 'All Entries' or 'Bookmarks', default to the first journal
     const targetJournalId = activeJournal ? activeJournal.id : (journals[0]?.id || 'j1');
     const newEntry = {
       id: `e-${Date.now()}`,
@@ -781,8 +785,6 @@ const App = () => {
 
   const handleDeleteEntry = async (id) => {
     const entryToDelete = entries.find(e => e.id === id);
-    
-    // Self-Cleaning: Delete any photos embedded in this entry from Google Drive
     if (entryToDelete && accessToken) {
       const regex = /https:\/\/lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/g;
       let match;
@@ -799,7 +801,6 @@ const App = () => {
       }
     }
 
-    // Delete the entry locally
     const updated = entries.filter(e => e.id !== id);
     setEntries(updated);
     if (selectedEntryId === id && updated.length > 0) {
@@ -860,8 +861,6 @@ const App = () => {
       type: 'confirm', title: 'Delete Journal', message: `Are you sure you want to delete "${activeJournal?.name}" and all of its associated entries? This action cannot be undone.`, confirmText: 'Delete', isDestructive: true,
       onConfirm: async () => {
         const entriesToDelete = entries.filter(e => e.journalId === id);
-        
-        // Self-Cleaning: Delete ALL photos inside ALL entries of this journal
         if (accessToken) {
           const regex = /https:\/\/lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/g;
           for (const entry of entriesToDelete) {
@@ -918,7 +917,6 @@ const App = () => {
   const findOrCreateDriveFile = async (token) => {
     window.gapi.client.setToken({ access_token: token });
     try {
-      // 1. Locate or Create "Epektasis Vault" Folder
       let folderId = driveFolderId;
       const folderRes = await window.gapi.client.drive.files.list({
         q: "mimeType='application/vnd.google-apps.folder' and name='Epektasis Vault' and trashed=false",
@@ -940,7 +938,6 @@ const App = () => {
       }
       setDriveFolderId(folderId);
 
-      // 2. Locate or Create Main JSON Data File
       const response = await window.gapi.client.drive.files.list({
         q: "name='epektasis_vault.json' and trashed=false",
         spaces: 'drive',
@@ -1020,7 +1017,6 @@ const App = () => {
     setTimeout(() => setIsSaving(false), 800);
   };
 
-  // FULL SIGN OUT / WIPE
   const handleFullSignOut = () => {
     setModalConfig({
       type: 'confirm',
@@ -1105,6 +1101,7 @@ const App = () => {
   const uiFontStack = themeConfig.uiFont === 'system-ui' ? 'system-ui, sans-serif' : `'${themeConfig.uiFont}', sans-serif`;
   const docFontStack = themeConfig.docFont === 'system-ui' ? 'system-ui, serif' : `'${themeConfig.docFont}', serif`;
 
+  // Updated Dynamic CSS to implement reading width and clean up typography
   const dynamicCss = `
     ${getGoogleFontsUrl()}
     :root {
@@ -1130,20 +1127,30 @@ const App = () => {
     .text-sidebar-inactive { color: color-mix(in srgb, var(--theme-sidebar-text) 70%, transparent) !important; }
     .hover\\:text-sidebar-hover:hover { color: var(--theme-sidebar-text) !important; }
     .text-sidebar-muted { color: color-mix(in srgb, var(--theme-sidebar-text) 40%, transparent) !important; }
-    .rte-content { font-family: var(--font-doc) !important; outline: none; }
-    .rte-content h1 { font-family: var(--font-ui) !important; font-size: 2.25rem; font-weight: 800; margin-bottom: 1rem; margin-top: 1.5rem; line-height: 1.2; color: #111; }
-    .rte-content h2 { font-family: var(--font-ui) !important; font-size: 1.875rem; font-weight: 700; margin-bottom: 0.75rem; margin-top: 1.5rem; line-height: 1.25; color: #111; }
-    .rte-content h3 { font-family: var(--font-ui) !important; font-size: 1.5rem; font-weight: 600; margin-bottom: 0.75rem; margin-top: 1.25rem; line-height: 1.3; color: #222; }
-    .rte-content blockquote { border-left: 4px solid var(--theme-accent); padding: 0.75rem 1rem; margin: 1.5rem 0; font-style: italic; color: #555; background-color: color-mix(in srgb, var(--theme-accent) 5%, transparent); border-radius: 0 0.5rem 0.5rem 0; }
-    .rte-content p { margin-bottom: 1rem; }
-    .rte-content ul { list-style-type: disc; margin-left: 1.5rem; margin-bottom: 1rem; }
-    .rte-content ol { list-style-type: decimal; margin-left: 1.5rem; margin-bottom: 1rem; }
+    
+    /* REFINED EDITOR TYPOGRAPHY */
+    .rte-content { 
+      font-family: var(--font-doc) !important; 
+      outline: none; 
+      max-width: 65ch; /* Optimal reading width */
+      margin: 0 auto;  /* Centers the text block */
+      line-height: 1.8; /* More breathing room */
+      color: inherit;
+    }
+    .rte-content h1 { font-family: var(--font-ui) !important; font-size: 2.5rem; font-weight: 800; margin-bottom: 1.5rem; margin-top: 2rem; letter-spacing: -0.02em; color: inherit; line-height: 1.2; }
+    .rte-content h2 { font-family: var(--font-ui) !important; font-size: 1.75rem; font-weight: 700; margin-bottom: 1rem; margin-top: 2rem; letter-spacing: -0.01em; color: inherit; line-height: 1.25; }
+    .rte-content h3 { font-family: var(--font-ui) !important; font-size: 1.25rem; font-weight: 600; margin-bottom: 0.75rem; margin-top: 1.5rem; color: inherit; line-height: 1.3; }
+    .rte-content blockquote { border-left: 3px solid var(--theme-accent); padding: 1rem 1.5rem; margin: 2rem 0; font-style: italic; color: inherit; opacity: 0.8; background-color: transparent; }
+    .rte-content p { margin-bottom: 1.5rem; }
+    .rte-content ul { list-style-type: disc; margin-left: 1.5rem; margin-bottom: 1.5rem; }
+    .rte-content ol { list-style-type: decimal; margin-left: 1.5rem; margin-bottom: 1.5rem; }
     .rte-content li { margin-bottom: 0.5rem; }
-    .rte-content img { max-width: 100%; height: auto; border-radius: 0.5rem; margin: 1.5rem auto; display: block; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
-    .rte-content [style*="text-align: center"] img { margin: 1.5rem auto; }
-    .rte-content [style*="text-align: right"] img { margin: 1.5rem 0 1.5rem auto; }
-    .rte-content [style*="text-align: left"] img { margin: 1.5rem auto 1.5rem 0; }
+    .rte-content img { max-width: 100%; height: auto; border-radius: 0.5rem; margin: 2rem auto; display: block; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+    .rte-content [style*="text-align: center"] img { margin: 2rem auto; }
+    .rte-content [style*="text-align: right"] img { margin: 2rem 0 2rem auto; }
+    .rte-content [style*="text-align: left"] img { margin: 2rem auto 2rem 0; }
     .rte-content:empty:before { content: attr(placeholder); color: #a1a1aa; pointer-events: none; }
+    
     .ease-apple { transition-timing-function: cubic-bezier(0.25, 0.1, 0.25, 1); }
     .custom-scrollbar::-webkit-scrollbar { width: 6px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
@@ -1152,6 +1159,30 @@ const App = () => {
     aside .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); }
     @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
     .animate-in { animation: fade-in 0.3s ease-out; }
+
+    /* AESTHETIC ENHANCEMENTS */
+    .texture-bg {
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+    }
+    
+    @keyframes pop {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.25); }
+      100% { transform: scale(1); }
+    }
+    .animate-pop { animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+
+    /* THEME: GOLDEN HOUR */
+    .theme-golden { background-color: #F5EAE0 !important; color: #4A3B32 !important; }
+    .theme-golden .bg-white { background-color: #FDF9F3 !important; border-color: #E8D8CA !important; }
+    .theme-golden .bg-zinc-50 { background-color: #F2E3D5 !important; }
+    .theme-golden .bg-zinc-100 { background-color: #EAD6C5 !important; }
+    .theme-golden .text-zinc-900, .theme-golden .text-zinc-800 { color: #3E2C20 !important; }
+    .theme-golden .text-zinc-700 { color: #5C4A3D !important; }
+    .theme-golden .text-zinc-500 { color: #8C7868 !important; }
+    .theme-golden .text-zinc-400 { color: #B5A496 !important; }
+    .theme-golden .border-zinc-100, .theme-golden .border-zinc-200 { border-color: #E8D8CA !important; }
+    .theme-golden .bg-\\[color\\:var\\(--theme-secondary\\)\\] { background-color: #F5EAE0 !important; }
   `;
 
   const renderContent = () => {
@@ -1162,18 +1193,18 @@ const App = () => {
         const recentEntries = [...entries].sort((a, b) => b.createdAt - a.createdAt).slice(0, 3);
 
         return (
-          <div className={`flex-1 flex-col p-6 md:p-12 overflow-y-auto bg-[#F8F9FA] custom-scrollbar ${showMobileDetail ? 'hidden md:flex' : 'flex'}`}>
+          <div className={`flex-1 flex-col p-6 md:p-12 overflow-y-auto bg-[color:var(--theme-secondary)] custom-scrollbar ${showMobileDetail ? 'hidden md:flex' : 'flex'}`}>
             <div className="max-w-4xl mx-auto w-full space-y-12">
               <div className="space-y-2 mt-8 md:mt-0">
-                <button onClick={() => setSidebarOpen(!isSidebarOpen)} className={`p-2 -ml-2 mb-4 text-zinc-500 hover:bg-zinc-100 rounded-full transition-colors ${isSidebarOpen ? 'md:hidden' : ''}`}>
+                <button onClick={() => setSidebarOpen(!isSidebarOpen)} className={`p-2 -ml-2 mb-4 text-zinc-500 hover:bg-zinc-200/50 rounded-full transition-colors ${isSidebarOpen ? 'md:hidden' : ''}`}>
                   <Menu size={24} />
                 </button>
                 <h1 className="text-4xl md:text-5xl font-extrabold text-zinc-900 tracking-tight">{greeting}.</h1>
-                <p className="text-lg text-zinc-500 font-medium">Ready to capture your thoughts today?</p>
+                <p className="text-lg text-zinc-600 font-medium">Ready to capture your thoughts today?</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <button onClick={() => { handleCreateEntry(); setShowMobileDetail(true); }} className="p-6 bg-[color:var(--theme-primary)] hover:bg-primary-dark text-[color:var(--theme-secondary)] rounded-3xl transition-colors text-left group shadow-lg shadow-black/10 flex flex-col justify-between min-h-[140px]">
+                <button onClick={() => { handleCreateEntry(); setShowMobileDetail(true); }} className="p-6 bg-[color:var(--theme-primary)] hover:bg-primary-dark text-white rounded-3xl transition-all hover:shadow-xl hover:-translate-y-1 duration-300 text-left group shadow-lg flex flex-col justify-between min-h-[140px]">
                   <div className="p-3 bg-white/10 rounded-2xl w-max group-hover:bg-white/20 transition-colors"><Plus size={24} /></div>
                   <div>
                     <h3 className="font-bold text-xl">New Reflection</h3>
@@ -1182,14 +1213,14 @@ const App = () => {
                 </button>
                 
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="p-6 bg-white border border-zinc-200 rounded-3xl flex flex-col justify-between">
+                  <div className="p-6 bg-white border border-zinc-100 rounded-3xl flex flex-col justify-between shadow-sm">
                     <Book size={24} className="text-[color:var(--theme-accent)] mb-4" />
                     <div>
                       <h3 className="font-bold text-2xl text-zinc-900">{journals.length}</h3>
                       <p className="text-zinc-500 text-sm font-medium">Active Journals</p>
                     </div>
                   </div>
-                  <div className="p-6 bg-white border border-zinc-200 rounded-3xl flex flex-col justify-between">
+                  <div className="p-6 bg-white border border-zinc-100 rounded-3xl flex flex-col justify-between shadow-sm">
                     <FileText size={24} className="text-[color:var(--theme-primary)] mb-4" />
                     <div>
                       <h3 className="font-bold text-2xl text-zinc-900">{entries.length}</h3>
@@ -1209,7 +1240,8 @@ const App = () => {
                         <button
                           key={entry.id}
                           onClick={() => { setSelectedEntryId(entry.id); setActiveJournal(journal || null); setActiveView('entries'); setShowMobileDetail(true); }}
-                          className="p-6 bg-white border border-zinc-200 rounded-3xl text-left hover:border-[color:var(--theme-accent)] hover:shadow-md transition-all group flex flex-col min-h-[160px] relative"
+                          // Updated Card styling for Glassmorphism/Shadow depth
+                          className="p-6 bg-white border border-zinc-100 rounded-3xl text-left shadow-sm hover:border-zinc-300 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ease-out group flex flex-col min-h-[160px] relative"
                         >
                           {entry.isBookmarked && (
                             <div className="absolute top-4 right-4 text-[color:var(--theme-primary)]">
@@ -1217,13 +1249,13 @@ const App = () => {
                             </div>
                           )}
                           <div className="flex justify-between items-start mb-4">
-                            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest bg-zinc-100 px-2 py-1 rounded">
+                            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest bg-zinc-50 px-2 py-1 rounded border border-zinc-100">
                               {entry.createdAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                             </span>
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: journal?.color || 'var(--theme-primary)' }} />
+                            <div className="w-2 h-2 rounded-full shadow-sm" style={{ backgroundColor: journal?.color || 'var(--theme-primary)' }} />
                           </div>
                           <h4 className="font-bold text-zinc-900 mb-2 line-clamp-2 group-hover:text-[color:var(--theme-accent)] transition-colors pr-6">{entry.title || 'Untitled Entry'}</h4>
-                          <p className="text-sm text-zinc-500 line-clamp-2 mt-auto">{entry.content ? entry.content.replace(/<[^>]+>/g, '') : 'Empty entry...'}</p>
+                          <p className="text-sm text-zinc-500 line-clamp-2 mt-auto leading-relaxed">{entry.content ? entry.content.replace(/<[^>]+>/g, '') : 'Empty entry...'}</p>
                         </button>
                       )
                     })}
@@ -1242,9 +1274,9 @@ const App = () => {
         for (let i = 1; i <= daysInMonth; i++) calendarDays.push(i);
 
         return (
-          <div className={`flex-1 flex-col p-6 md:p-12 bg-zinc-50 overflow-y-auto ${showMobileDetail ? 'flex' : 'hidden md:flex'}`}>
+          <div className={`flex-1 flex-col p-6 md:p-12 bg-[color:var(--theme-secondary)] overflow-y-auto ${showMobileDetail ? 'flex' : 'hidden md:flex'}`}>
             <div className="flex items-center gap-4 self-start mb-6">
-              <button onClick={() => setSidebarOpen(!isSidebarOpen)} className={`p-2 -ml-2 text-zinc-500 hover:bg-zinc-100 rounded-full transition-colors ${isSidebarOpen ? 'md:hidden' : ''}`}>
+              <button onClick={() => setSidebarOpen(!isSidebarOpen)} className={`p-2 -ml-2 text-zinc-500 hover:bg-white hover:shadow-sm rounded-full transition-all ${isSidebarOpen ? 'md:hidden' : ''}`}>
                 <Menu size={24} />
               </button>
               <button onClick={() => { setActiveView('home'); setTagFilter(null); setArchiveFilter(null); setShowMobileDetail(false); }} className="text-zinc-500 hover:text-zinc-900 flex items-center gap-2 font-semibold transition-colors">
@@ -1252,10 +1284,10 @@ const App = () => {
               </button>
             </div>
             <div className="flex flex-col items-center justify-center flex-1 min-h-[400px]">
-              <Calendar size={64} className="text-[#EEE1C6] mb-4" />
+              <Calendar size={64} className="text-zinc-300 mb-4" />
               <h2 className="text-2xl font-bold text-zinc-800">{today.toLocaleString('default', { month: 'long', year: 'numeric' })}</h2>
               <p className="text-zinc-500 max-w-sm text-center mt-2">Browse your memories chronologically.</p>
-              <div className="mt-8 grid grid-cols-7 gap-2 w-full max-w-md">
+              <div className="mt-8 grid grid-cols-7 gap-2 w-full max-w-md bg-white p-6 rounded-3xl shadow-sm border border-zinc-100">
                 {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
                   <div key={day} className="text-center text-xs font-bold text-zinc-400 mb-2">{day}</div>
                 ))}
@@ -1279,15 +1311,15 @@ const App = () => {
                           }
                         }
                       }}
-                      className={`aspect-square rounded-lg border flex flex-col items-center justify-center text-xs font-bold transition-all relative
-                        ${isToday ? 'bg-[#00471B] text-white ring-4 ring-[#EEE1C6]' : 'bg-white text-zinc-700 hover:bg-zinc-50'}
-                        ${hasEntry && !isToday ? 'border-[#0077C0] cursor-pointer' : 'border-zinc-200'}
-                        ${!hasEntry && !isToday ? 'cursor-default' : ''}
+                      className={`aspect-square rounded-xl border flex flex-col items-center justify-center text-xs font-bold transition-all relative
+                        ${isToday ? 'bg-[color:var(--theme-primary)] text-white shadow-md' : 'bg-transparent text-zinc-700 hover:bg-zinc-50'}
+                        ${hasEntry && !isToday ? 'border-[color:var(--theme-accent)] cursor-pointer bg-[color:var(--theme-accent)]/5' : 'border-transparent'}
+                        ${!hasEntry && !isToday ? 'cursor-default hover:bg-transparent' : ''}
                       `}
                     >
                       {day}
-                      {hasEntry && !isToday && <div className="w-1.5 h-1.5 rounded-full bg-[#0077C0] absolute bottom-2" />}
-                      {hasEntry && isToday && <div className="w-1.5 h-1.5 rounded-full bg-white absolute bottom-2" />}
+                      {hasEntry && !isToday && <div className="w-1 h-1 rounded-full bg-[color:var(--theme-accent)] absolute bottom-2" />}
+                      {hasEntry && isToday && <div className="w-1 h-1 rounded-full bg-white absolute bottom-2" />}
                     </button>
                   );
                 })}
@@ -1306,18 +1338,22 @@ const App = () => {
                 <div className="hidden md:flex items-center gap-2 text-zinc-400"><LayoutTemplate size={14} /><span className="text-xs font-medium">Template Editor</span></div>
               </div>
               <div className="flex items-center gap-1 md:gap-2">
+                {/* ZEN MODE BUTTON (Templates) */}
+                <button onClick={() => setIsZenMode(!isZenMode)} className={`p-2 rounded-full transition-all flex items-center justify-center ${isZenMode ? 'bg-[color:var(--theme-primary)] text-white shadow-sm' : 'text-zinc-400 hover:bg-zinc-100'}`} title="Toggle Zen Mode">
+                  <Maximize2 size={18} className={isZenMode ? "scale-90" : ""} />
+                </button>
                 <button onClick={syncToDrive} className={`p-2 rounded-full transition-all ${isSaving ? 'text-green-600 bg-green-50' : 'text-zinc-400 hover:bg-zinc-100'}`}>{isSaving ? <CheckCircle2 size={20} /> : <Save size={20} />}</button>
                 <div className="w-px h-6 bg-zinc-200 mx-1" />
                 <button onClick={() => handleDeleteTemplate(selectedTemplate.id)} className="p-2 text-zinc-400 hover:bg-red-50 hover:text-red-600 rounded-full transition-all" disabled={!selectedTemplate}><Trash2 size={18} /></button>
               </div>
             </header>
-            <div className="flex-1 overflow-y-auto px-8 pt-12 pb-32 md:pb-[40vh] flex justify-center custom-scrollbar bg-[#F8F9FA]/30">
+            <div className="flex-1 overflow-y-auto pt-12 flex justify-center custom-scrollbar bg-[color:var(--theme-secondary)]/30">
               {selectedTemplate ? (
-                <div className="max-w-3xl w-full space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  <div className="space-y-4">
+                <div className="max-w-4xl w-full animate-in fade-in slide-in-from-bottom-4 duration-500 px-8">
+                  <div className="space-y-4 max-w-[65ch] mx-auto">
                     <input 
                       type="text" 
-                      className="w-full text-4xl font-extrabold tracking-tight text-zinc-900 border-none outline-none placeholder-zinc-200 bg-transparent"
+                      className="w-full text-4xl font-extrabold tracking-tight text-zinc-900 border-none outline-none placeholder-zinc-300 bg-transparent text-center"
                       value={selectedTemplate.name || ''}
                       onChange={(e) => {
                         const updated = templates.map(t => t.id === selectedTemplate.id ? { ...t, name: e.target.value } : t);
@@ -1336,13 +1372,13 @@ const App = () => {
                     }}
                     onShowMessage={(msg) => setModalConfig({ type: 'alert', title: 'Notice', message: msg, confirmText: 'Got it' })}
                   />
-                  <div className="h-32 md:h-[40vh] w-full shrink-0 pointer-events-none" />
+                  <div className="h-32 w-full shrink-0 pointer-events-none" />
                 </div>
               ) : (
                 <div className="max-w-2xl w-full h-full flex flex-col items-center justify-center text-zinc-400 animate-in fade-in duration-500">
                   <LayoutTemplate size={48} className="mb-4 opacity-20" />
                   <p>No template selected.</p>
-                  <button onClick={handleCreateTemplate} className="mt-6 px-6 py-2.5 bg-[color:var(--theme-primary)] hover:bg-primary-dark transition-colors text-[color:var(--theme-secondary)] rounded-full text-sm font-bold flex items-center gap-2 shadow-lg"><Plus size={16} /> Create New Template</button>
+                  <button onClick={handleCreateTemplate} className="mt-6 px-6 py-2.5 bg-[color:var(--theme-primary)] hover:bg-primary-dark transition-colors text-white rounded-full text-sm font-bold flex items-center gap-2 shadow-lg"><Plus size={16} /> Create New Template</button>
                 </div>
               )}
             </div>
@@ -1350,23 +1386,23 @@ const App = () => {
         );
       case 'settings':
         return (
-          <div className={`flex-1 flex-col p-6 md:p-12 overflow-y-auto bg-white custom-scrollbar ${showMobileDetail ? 'flex' : 'hidden md:flex'}`}>
+          <div className={`flex-1 flex-col p-6 md:p-12 overflow-y-auto bg-[color:var(--theme-secondary)] custom-scrollbar ${showMobileDetail ? 'flex' : 'hidden md:flex'}`}>
             <div className="max-w-3xl mx-auto w-full">
               <div className="flex items-center gap-4 self-start mb-6">
-                <button onClick={() => setSidebarOpen(!isSidebarOpen)} className={`p-2 -ml-2 text-zinc-500 hover:bg-zinc-100 rounded-full transition-colors ${isSidebarOpen ? 'md:hidden' : ''}`}><Menu size={24} /></button>
+                <button onClick={() => setSidebarOpen(!isSidebarOpen)} className={`p-2 -ml-2 text-zinc-500 hover:bg-white hover:shadow-sm rounded-full transition-all ${isSidebarOpen ? 'md:hidden' : ''}`}><Menu size={24} /></button>
                 <button onClick={() => { setActiveView('home'); setTagFilter(null); setArchiveFilter(null); setShowMobileDetail(false); }} className="text-zinc-500 hover:text-zinc-900 flex items-center gap-2 font-semibold transition-colors"><Home size={20} /> <span className="hidden sm:inline">Home</span></button>
               </div>
               <div className="flex items-center gap-4 mb-8">
-                <div className="p-3 bg-[color:var(--theme-primary)] rounded-2xl text-[color:var(--theme-secondary)] shrink-0"><Settings size={28} /></div>
+                <div className="p-3 bg-white shadow-sm rounded-2xl text-[color:var(--theme-primary)] shrink-0 border border-zinc-100"><Settings size={28} /></div>
                 <h2 className="text-3xl font-extrabold text-zinc-900">System Settings</h2>
               </div>
               
               <div className="space-y-8 pb-12">
                 
                 {/* SECURITY & ACCESS */}
-                <section className="p-6 border border-zinc-200 rounded-3xl bg-zinc-50">
+                <section className="p-6 border border-zinc-100 shadow-sm rounded-3xl bg-white">
                   <div className="flex items-center gap-2 mb-4">
-                    <Lock size={20} className="text-zinc-700" />
+                    <Lock size={20} className="text-[color:var(--theme-primary)]" />
                     <h3 className="font-bold text-lg text-zinc-900">Security & Access</h3>
                   </div>
                   
@@ -1379,7 +1415,7 @@ const App = () => {
                           placeholder={userPin ? "********" : "Enter a new PIN..."}
                           value={pinSetup}
                           onChange={(e) => setPinSetup(e.target.value)}
-                          className="flex-1 px-4 py-2.5 rounded-xl border border-zinc-300 outline-none focus-ring-accent text-base transition-all min-w-0"
+                          className="flex-1 px-4 py-2.5 rounded-xl border border-zinc-200 outline-none focus-ring-accent text-base transition-all min-w-0 bg-zinc-50 focus:bg-white"
                         />
                         <div className="flex gap-2">
                           <button 
@@ -1390,7 +1426,7 @@ const App = () => {
                               setPinSetup('');
                               setModalConfig({ type: 'alert', title: 'PIN Saved', message: 'Your Vault PIN has been updated. You can now lock the app.', confirmText: 'Okay' });
                             }}
-                            className="px-4 py-2 bg-zinc-800 hover:bg-zinc-900 text-white rounded-xl text-sm font-bold transition-colors shadow-sm whitespace-nowrap"
+                            className="px-4 py-2 bg-[color:var(--theme-primary)] hover:bg-primary-dark text-white rounded-xl text-sm font-bold transition-colors shadow-sm whitespace-nowrap"
                           >
                             {userPin ? 'Update' : 'Set PIN'}
                           </button>
@@ -1401,7 +1437,7 @@ const App = () => {
                                 localStorage.removeItem('epektasis_pin');
                                 setModalConfig({ type: 'alert', title: 'PIN Removed', message: 'Your Vault is now unlocked by default on this device.', confirmText: 'Okay' });
                               }}
-                              className="px-4 py-2 bg-red-100 text-red-600 hover:bg-red-200 rounded-xl text-sm font-bold transition-colors whitespace-nowrap"
+                              className="px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 border border-red-100 rounded-xl text-sm font-bold transition-colors whitespace-nowrap"
                             >
                               Remove
                             </button>
@@ -1412,14 +1448,14 @@ const App = () => {
                     </div>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between py-4 border-t border-zinc-200 gap-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between py-4 border-t border-zinc-100 gap-4">
                     <div>
                       <p className="font-medium text-red-600">Complete Sign Out</p>
                       <p className="text-sm text-zinc-500">Wipes all local data from this device and disconnects Google Drive.</p>
                     </div>
                     <button 
                       onClick={handleFullSignOut}
-                      className="px-6 py-2.5 bg-red-100 text-red-600 hover:bg-red-200 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 whitespace-nowrap shrink-0"
+                      className="px-6 py-2.5 bg-red-50 text-red-600 hover:bg-red-100 border border-red-100 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 whitespace-nowrap shrink-0"
                     >
                       <LogOut size={16} /> Sign Out
                     </button>
@@ -1427,10 +1463,10 @@ const App = () => {
                 </section>
 
                 {/* THEMING */}
-                <section className="p-6 border border-zinc-200 rounded-3xl bg-zinc-50">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 border-b border-zinc-200 pb-4 gap-4">
-                    <div className="flex items-center gap-2"><Palette size={20} className="text-zinc-700" /><h3 className="font-bold text-lg text-zinc-900">App Theming</h3></div>
-                    <button onClick={() => setThemeConfig(DEFAULT_THEME)} className="text-xs font-bold text-zinc-500 hover:text-zinc-900 px-3 py-1.5 bg-zinc-200 hover:bg-zinc-300 rounded-lg transition-colors self-start sm:self-auto shrink-0">Restore Defaults</button>
+                <section className="p-6 border border-zinc-100 shadow-sm rounded-3xl bg-white">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 border-b border-zinc-100 pb-4 gap-4">
+                    <div className="flex items-center gap-2"><Palette size={20} className="text-[color:var(--theme-primary)]" /><h3 className="font-bold text-lg text-zinc-900">App Theming</h3></div>
+                    <button onClick={() => setThemeConfig(DEFAULT_THEME)} className="text-xs font-bold text-zinc-500 hover:text-zinc-900 px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors self-start sm:self-auto shrink-0">Restore Defaults</button>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -1438,55 +1474,57 @@ const App = () => {
                       <label className="block text-sm font-bold text-zinc-700 mb-2">Primary Color</label>
                       <div className="flex items-center gap-3">
                         <input type="color" value={themeConfig.primary} onChange={e => setThemeConfig({...themeConfig, primary: e.target.value})} className="w-10 h-10 rounded cursor-pointer border-0 bg-transparent p-0 shrink-0" />
-                        <input type="text" value={themeConfig.primary} onChange={e => setThemeConfig({...themeConfig, primary: e.target.value})} className="flex-1 px-3 py-2 text-base rounded-xl border border-zinc-300 uppercase focus-ring-accent min-w-0" />
+                        <input type="text" value={themeConfig.primary} onChange={e => setThemeConfig({...themeConfig, primary: e.target.value})} className="flex-1 px-3 py-2 text-base rounded-xl border border-zinc-200 bg-zinc-50 focus:bg-white uppercase focus-ring-accent min-w-0" />
                       </div>
                     </div>
                     <div>
                       <label className="block text-sm font-bold text-zinc-700 mb-2">Secondary Color</label>
                       <div className="flex items-center gap-3">
                         <input type="color" value={themeConfig.secondary} onChange={e => setThemeConfig({...themeConfig, secondary: e.target.value})} className="w-10 h-10 rounded cursor-pointer border-0 bg-transparent p-0 shrink-0" />
-                        <input type="text" value={themeConfig.secondary} onChange={e => setThemeConfig({...themeConfig, secondary: e.target.value})} className="flex-1 px-3 py-2 text-base rounded-xl border border-zinc-300 uppercase focus-ring-accent min-w-0" />
+                        <input type="text" value={themeConfig.secondary} onChange={e => setThemeConfig({...themeConfig, secondary: e.target.value})} className="flex-1 px-3 py-2 text-base rounded-xl border border-zinc-200 bg-zinc-50 focus:bg-white uppercase focus-ring-accent min-w-0" />
                       </div>
                     </div>
                     <div>
                       <label className="block text-sm font-bold text-zinc-700 mb-2">Accent Color</label>
                       <div className="flex items-center gap-3">
                         <input type="color" value={themeConfig.accent} onChange={e => setThemeConfig({...themeConfig, accent: e.target.value})} className="w-10 h-10 rounded cursor-pointer border-0 bg-transparent p-0 shrink-0" />
-                        <input type="text" value={themeConfig.accent} onChange={e => setThemeConfig({...themeConfig, accent: e.target.value})} className="flex-1 px-3 py-2 text-base rounded-xl border border-zinc-300 uppercase focus-ring-accent min-w-0" />
+                        <input type="text" value={themeConfig.accent} onChange={e => setThemeConfig({...themeConfig, accent: e.target.value})} className="flex-1 px-3 py-2 text-base rounded-xl border border-zinc-200 bg-zinc-50 focus:bg-white uppercase focus-ring-accent min-w-0" />
                       </div>
                     </div>
                     <div>
                       <label className="block text-sm font-bold text-zinc-700 mb-2">Sidebar Text</label>
                       <div className="flex items-center gap-3">
                         <input type="color" value={themeConfig.sidebarText} onChange={e => setThemeConfig({...themeConfig, sidebarText: e.target.value})} className="w-10 h-10 rounded cursor-pointer border-0 bg-transparent p-0 shrink-0" />
-                        <input type="text" value={themeConfig.sidebarText} onChange={e => setThemeConfig({...themeConfig, sidebarText: e.target.value})} className="flex-1 px-3 py-2 text-base rounded-xl border border-zinc-300 uppercase focus-ring-accent min-w-0" />
+                        <input type="text" value={themeConfig.sidebarText} onChange={e => setThemeConfig({...themeConfig, sidebarText: e.target.value})} className="flex-1 px-3 py-2 text-base rounded-xl border border-zinc-200 bg-zinc-50 focus:bg-white uppercase focus-ring-accent min-w-0" />
                       </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-zinc-200 mb-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-zinc-100 mb-6">
                     <div>
                       <label className="block text-sm font-bold text-zinc-700 mb-2">UI Font (Interface)</label>
-                      <select value={themeConfig.uiFont} onChange={e => setThemeConfig({...themeConfig, uiFont: e.target.value})} className="w-full px-3 py-2 text-base rounded-xl border border-zinc-300 bg-white focus-ring-accent outline-none">
+                      <select value={themeConfig.uiFont} onChange={e => setThemeConfig({...themeConfig, uiFont: e.target.value})} className="w-full px-3 py-2 text-base rounded-xl border border-zinc-200 bg-zinc-50 focus:bg-white focus-ring-accent outline-none">
                         <option value="Inter">Inter</option><option value="Roboto">Roboto</option><option value="Open Sans">Open Sans</option><option value="system-ui">System Default</option>
                       </select>
                     </div>
                     <div>
                       <label className="block text-sm font-bold text-zinc-700 mb-2">Document Font (Editor)</label>
-                      <select value={themeConfig.docFont} onChange={e => setThemeConfig({...themeConfig, docFont: e.target.value})} className="w-full px-3 py-2 text-base rounded-xl border border-zinc-300 bg-white focus-ring-accent outline-none">
+                      <select value={themeConfig.docFont} onChange={e => setThemeConfig({...themeConfig, docFont: e.target.value})} className="w-full px-3 py-2 text-base rounded-xl border border-zinc-200 bg-zinc-50 focus:bg-white focus-ring-accent outline-none">
                         <option value="Charter">Charter</option><option value="Merriweather">Merriweather</option><option value="Lora">Lora</option><option value="Georgia">Georgia</option>
                       </select>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between py-4 border-t border-zinc-200 gap-4">
+                  <div className="flex items-center justify-between py-4 border-t border-zinc-100 gap-4">
                     <div className="flex-1 pr-4">
-                      <p className="font-medium text-zinc-800">Dark Mode</p>
-                      <p className="text-sm text-zinc-500">Toggle dark aesthetic across the OS.</p>
+                      <p className="font-medium text-zinc-800">Visual Theme</p>
+                      <p className="text-sm text-zinc-500">Choose between Light, Dark, or Golden Hour.</p>
                     </div>
-                    <button onClick={() => setDarkMode(!isDarkMode)} className={`w-12 h-6 rounded-full transition-colors relative shrink-0 ${isDarkMode ? 'bg-[color:var(--theme-primary)]' : 'bg-zinc-300'}`}>
-                      <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${isDarkMode ? 'translate-x-7' : 'translate-x-1'}`} />
-                    </button>
+                    <div className="flex items-center gap-1 bg-zinc-100 p-1 rounded-xl shrink-0">
+                      <button onClick={() => setThemeMode('light')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${themeMode === 'light' ? 'bg-white shadow-sm text-zinc-900' : 'text-zinc-500 hover:text-zinc-700'}`}>Light</button>
+                      <button onClick={() => setThemeMode('dark')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${themeMode === 'dark' ? 'bg-zinc-800 shadow-sm text-white' : 'text-zinc-500 hover:text-zinc-700'}`}>Dark</button>
+                      <button onClick={() => setThemeMode('golden')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${themeMode === 'golden' ? 'bg-[#D4A373] shadow-sm text-white' : 'text-zinc-500 hover:text-zinc-700'}`}>Golden</button>
+                    </div>
                   </div>
                 </section>
 
@@ -1505,7 +1543,7 @@ const App = () => {
                         placeholder="e.g., 123456789-abcxyz.apps.googleusercontent.com"
                         value={googleClientId}
                         onChange={(e) => setGoogleClientId(e.target.value)}
-                        className="w-full px-4 py-2 rounded-xl border border-zinc-300 focus-ring-accent outline-none transition-all text-base min-w-0"
+                        className="w-full px-4 py-2 rounded-xl border border-zinc-300 focus-ring-accent outline-none transition-all text-base min-w-0 bg-white"
                       />
                       <p className="text-xs text-zinc-500 mt-1">Required to save your encrypted vault to Google Drive.</p>
                     </div>
@@ -1555,31 +1593,31 @@ const App = () => {
         });
 
         return (
-          <div className={`flex-1 flex-col p-6 md:p-12 overflow-y-auto bg-white custom-scrollbar ${showMobileDetail ? 'flex' : 'hidden md:flex'}`}>
+          <div className={`flex-1 flex-col p-6 md:p-12 overflow-y-auto bg-[color:var(--theme-secondary)] custom-scrollbar ${showMobileDetail ? 'flex' : 'hidden md:flex'}`}>
             <div className="max-w-4xl mx-auto w-full">
               <div className="flex items-center gap-4 self-start mb-6">
-                <button onClick={() => setSidebarOpen(!isSidebarOpen)} className={`p-2 -ml-2 text-zinc-500 hover:bg-zinc-100 rounded-full transition-colors ${isSidebarOpen ? 'md:hidden' : ''}`}><Menu size={24} /></button>
+                <button onClick={() => setSidebarOpen(!isSidebarOpen)} className={`p-2 -ml-2 text-zinc-500 hover:bg-white hover:shadow-sm rounded-full transition-all ${isSidebarOpen ? 'md:hidden' : ''}`}><Menu size={24} /></button>
                 <button onClick={() => { setActiveView('home'); setTagFilter(null); setArchiveFilter(null); setShowMobileDetail(false); }} className="text-zinc-500 hover:text-zinc-900 flex items-center gap-2 font-semibold transition-colors"><Home size={20} /> <span className="hidden sm:inline">Home</span></button>
               </div>
               <h2 className="text-3xl font-extrabold text-zinc-900 mb-8">Life Analytics</h2>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                <div className="p-6 bg-white border border-zinc-200 rounded-3xl">
+                <div className="p-6 bg-white border border-zinc-100 shadow-sm rounded-3xl">
                   <h4 className="text-sm font-bold text-zinc-400 uppercase tracking-widest mb-2">Total Memories</h4>
                   <div className="text-4xl font-extrabold text-[color:var(--theme-primary)]">{totalEntries}</div>
                 </div>
-                <div className="p-6 bg-white border border-zinc-200 rounded-3xl">
+                <div className="p-6 bg-white border border-zinc-100 shadow-sm rounded-3xl">
                   <h4 className="text-sm font-bold text-zinc-400 uppercase tracking-widest mb-2">Most Frequent Mood</h4>
                   <div className="text-2xl font-bold text-[color:var(--theme-accent)] capitalize">{Object.keys(moodCounts).sort((a,b) => moodCounts[b] - moodCounts[a])[0] || 'Neutral'}</div>
                 </div>
-                <div className="p-6 bg-white border border-zinc-200 rounded-3xl">
+                <div className="p-6 bg-white border border-zinc-100 shadow-sm rounded-3xl">
                   <h4 className="text-sm font-bold text-zinc-400 uppercase tracking-widest mb-2">Active Journals</h4>
                   <div className="text-4xl font-extrabold text-zinc-900">{journals.length}</div>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="p-6 bg-secondary-30 rounded-3xl border border-[color:var(--theme-secondary)]">
+                <div className="p-6 bg-white rounded-3xl shadow-sm border border-zinc-100">
                   <h4 className="text-sm font-bold text-[color:var(--theme-primary)] mb-4 uppercase tracking-widest">Consistency Heatmap (Last 50 Days)</h4>
                   <div className="flex gap-1 flex-wrap">
                     {heatmap.map((hasEntry, i) => (
@@ -1587,12 +1625,12 @@ const App = () => {
                     ))}
                   </div>
                 </div>
-                <div className="p-6 bg-zinc-50 rounded-3xl border border-zinc-100">
+                <div className="p-6 bg-white rounded-3xl shadow-sm border border-zinc-100">
                   <h4 className="text-sm font-bold text-zinc-400 mb-4 uppercase tracking-widest">Sentiment Mix</h4>
                   <div className="h-4 w-full flex rounded-full overflow-hidden mb-3">
-                    {pPositive > 0 && <div className="h-full bg-green-500" style={{ width: `${pPositive}%` }} title="Positive" />}
-                    {pNeutral > 0 && <div className="h-full bg-blue-400" style={{ width: `${pNeutral}%` }} title="Neutral" />}
-                    {pNegative > 0 && <div className="h-full bg-red-400" style={{ width: `${pNegative}%` }} title="Negative" />}
+                    {pPositive > 0 && <div className="h-full bg-[color:var(--theme-primary)]" style={{ width: `${pPositive}%` }} title="Positive" />}
+                    {pNeutral > 0 && <div className="h-full bg-zinc-300" style={{ width: `${pNeutral}%` }} title="Neutral" />}
+                    {pNegative > 0 && <div className="h-full bg-orange-400" style={{ width: `${pNegative}%` }} title="Negative" />}
                   </div>
                   <div className="flex justify-between text-xs font-bold text-zinc-500">
                     <span>Positive: {Math.round(pPositive || 0)}%</span>
@@ -1636,19 +1674,29 @@ const App = () => {
                 {/* BOOKMARK BUTTON */}
                 {selectedEntry && (
                   <button 
-                    onClick={() => toggleBookmark(selectedEntry.id)}
+                    onClick={() => {
+                      setAnimateBookmark(true);
+                      toggleBookmark(selectedEntry.id);
+                      setTimeout(() => setAnimateBookmark(false), 300);
+                    }}
                     className={`p-2 rounded-full transition-all flex items-center justify-center ${
                       selectedEntry.isBookmarked 
                         ? 'text-[color:var(--theme-primary)] bg-[color:var(--theme-primary)]/10' 
                         : 'text-zinc-400 hover:bg-zinc-100'
-                    }`}
+                    } ${animateBookmark ? 'animate-pop' : ''}`}
                     title={selectedEntry.isBookmarked ? "Remove Bookmark" : "Bookmark Entry"}
                   >
                     <Bookmark size={20} className={selectedEntry.isBookmarked ? "fill-current" : ""} />
                   </button>
                 )}
 
-                <button onClick={() => setShowTemplatePicker(true)} className="flex items-center gap-2 px-3 md:px-4 py-2 bg-zinc-100 text-zinc-700 rounded-full text-xs font-bold hover:bg-zinc-200 transition-all"><LayoutTemplate size={14} /><span className="hidden xl:inline">Templates</span></button>
+                <button onClick={() => setShowTemplatePicker(true)} className="flex items-center gap-2 px-3 md:px-4 py-2 bg-zinc-50 border border-zinc-200 text-zinc-700 rounded-full text-xs font-bold hover:bg-zinc-100 transition-all shadow-sm"><LayoutTemplate size={14} /><span className="hidden xl:inline">Templates</span></button>
+                
+                {/* ZEN MODE BUTTON */}
+                <button onClick={() => setIsZenMode(!isZenMode)} className={`p-2 rounded-full transition-all flex items-center justify-center ${isZenMode ? 'bg-[color:var(--theme-primary)] text-white shadow-sm' : 'text-zinc-400 hover:bg-zinc-100'}`} title="Toggle Zen Mode">
+                  <Maximize2 size={18} className={isZenMode ? "scale-90" : ""} />
+                </button>
+
                 <button onClick={syncToDrive} className={`p-2 rounded-full transition-all ${isSaving ? 'text-green-600 bg-green-50' : 'text-zinc-400 hover:bg-zinc-100'}`}>{isSaving ? <CheckCircle2 size={20} /> : <Save size={20} />}</button>
                 <div className="w-px h-6 bg-zinc-200 mx-1 hidden md:block" />
                 
@@ -1665,40 +1713,62 @@ const App = () => {
               </div>
             </header>
 
-            <div className="flex-1 overflow-y-auto px-8 pt-12 pb-32 md:pb-[40vh] flex justify-center custom-scrollbar bg-[#F8F9FA]/30">
+            <div className="flex-1 overflow-y-auto pt-12 flex justify-center custom-scrollbar bg-[color:var(--theme-secondary)]/30">
               {selectedEntry ? (
-                <div className="max-w-3xl w-full space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  <div className="space-y-4">
-                    <input type="text" className="w-full text-4xl font-extrabold tracking-tight text-zinc-900 border-none outline-none placeholder-zinc-200 bg-transparent" value={selectedEntry.title || ''} onChange={(e) => { const updated = entries.map(ent => ent.id === selectedEntry.id ? { ...ent, title: e.target.value } : ent); setEntries(updated); }} placeholder="Entry Title" />
-                    <div className="flex flex-wrap items-center gap-4 text-sm text-zinc-400 font-medium relative">
-                      <div className="flex items-center gap-1.5 px-3 py-1 bg-white border border-zinc-100 rounded-full"><Calendar size={12} className="text-[color:var(--theme-primary)]" />{selectedEntry.createdAt.toLocaleDateString(undefined, { dateStyle: 'long' })}</div>
+                <div className="max-w-4xl w-full animate-in fade-in slide-in-from-bottom-4 duration-500 px-8">
+                  
+                  {/* Title & Metadata Header */}
+                  <div className="space-y-6 mb-8 max-w-[65ch] mx-auto">
+                    <input 
+                      type="text" 
+                      className="w-full text-4xl font-extrabold tracking-tight text-zinc-900 border-none outline-none placeholder-zinc-300 bg-transparent text-center" 
+                      value={selectedEntry.title || ''} 
+                      onChange={(e) => { const updated = entries.map(ent => ent.id === selectedEntry.id ? { ...ent, title: e.target.value } : ent); setEntries(updated); }} 
+                      placeholder="Entry Title" 
+                    />
+                    
+                    <div className="flex flex-wrap items-center justify-center gap-4 text-sm text-zinc-500 font-medium relative">
+                      <div className="flex items-center gap-1.5 px-3 py-1 bg-white border border-zinc-200 shadow-sm rounded-full">
+                        <Calendar size={12} className="text-[color:var(--theme-primary)]" />
+                        {selectedEntry.createdAt.toLocaleDateString(undefined, { dateStyle: 'long' })}
+                      </div>
+                      
                       <div className="relative" ref={moodMenuRef}>
-                        <button onClick={() => setIsMoodMenuOpen(!isMoodMenuOpen)} className="flex items-center gap-1.5 px-3 py-1 bg-white border border-zinc-100 rounded-full hover:bg-zinc-50 transition-colors" title="Change Mood"><CurrentMoodIcon size={14} className={currentMoodColor} /><span className="capitalize">{selectedEntry.mood || 'neutral'}</span></button>
+                        <button onClick={() => setIsMoodMenuOpen(!isMoodMenuOpen)} className="group flex items-center gap-1.5 px-3 py-1 bg-white border border-zinc-200 shadow-sm rounded-full hover:bg-zinc-50 hover:scale-105 transition-all duration-300" title="Change Mood">
+                          <CurrentMoodIcon size={14} className={`${currentMoodColor} group-hover:rotate-12 transition-transform duration-300`} />
+                          <span className="capitalize">{selectedEntry.mood || 'neutral'}</span>
+                        </button>
                         {isMoodMenuOpen && (
-                          <div className="absolute top-full left-0 mt-2 bg-white border border-zinc-200 rounded-xl shadow-xl py-2 z-50 w-40 animate-in fade-in zoom-in-95 duration-100">
+                          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-white border border-zinc-200 rounded-xl shadow-xl py-2 z-50 w-40 animate-in fade-in zoom-in-95 duration-100">
                             {MOODS.map(m => ( <button key={m.id} onClick={() => { const updated = entries.map(ent => ent.id === selectedEntry.id ? { ...ent, mood: m.id } : ent); setEntries(updated); setIsMoodMenuOpen(false); }} className={`w-full text-left px-4 py-2 text-sm flex items-center gap-3 transition-colors ${selectedEntry.mood === m.id ? 'bg-zinc-50 font-semibold' : 'hover:bg-zinc-50 text-zinc-700'}`}><m.icon size={16} className={m.color} />{m.label}</button> ))}
                           </div>
                         )}
                       </div>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-zinc-100/50 mt-2">
+                    
+                    <div className="flex flex-wrap items-center justify-center gap-2 pt-4">
                       {selectedEntry.tags?.map(tag => (
-                        <span key={tag} className="flex items-center gap-1 px-2.5 py-1 bg-[color:var(--theme-primary)]/10 text-[color:var(--theme-primary)] rounded-full text-xs font-bold transition-colors">#{tag}<button onClick={() => { const updated = entries.map(ent => ent.id === selectedEntry.id ? { ...ent, tags: ent.tags.filter(t => t !== tag) } : ent); setEntries(updated); }} className="hover:text-red-500 transition-colors ml-1 p-0.5 rounded-full hover:bg-red-100/50" title="Remove Tag"><X size={10} /></button></span>
+                        <span key={tag} className="flex items-center gap-1 px-3 py-1 bg-white border border-[color:var(--theme-primary)]/20 text-[color:var(--theme-primary)] rounded-full text-xs font-bold transition-colors shadow-sm">
+                          #{tag}
+                          <button onClick={() => { const updated = entries.map(ent => ent.id === selectedEntry.id ? { ...ent, tags: ent.tags.filter(t => t !== tag) } : ent); setEntries(updated); }} className="hover:text-red-500 transition-colors ml-1 p-0.5 rounded-full hover:bg-red-50" title="Remove Tag"><X size={10} /></button>
+                        </span>
                       ))}
-                      <div className="relative flex items-center">
-                        <Hash size={12} className="absolute left-2.5 text-zinc-400" />
-                        <input type="text" placeholder="Add tag..." className="pl-7 pr-3 py-1 text-xs bg-white border border-zinc-200 hover:border-zinc-300 focus:border-[color:var(--theme-accent)] rounded-full outline-none transition-all w-28 focus:w-32 placeholder-zinc-400 text-zinc-700 font-medium" onKeyDown={(e) => { if (e.key === 'Enter' && e.target.value.trim()) { const newTag = e.target.value.replace(/#/g, '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, ''); if (newTag && !selectedEntry.tags?.includes(newTag)) { const updated = entries.map(ent => ent.id === selectedEntry.id ? { ...ent, tags: [...(ent.tags || []), newTag] } : ent); setEntries(updated); } e.target.value = ''; } }} />
+                      <div className="relative flex items-center shadow-sm rounded-full">
+                        <Hash size={12} className="absolute left-3 text-zinc-400" />
+                        <input type="text" placeholder="Add tag..." className="pl-8 pr-3 py-1.5 text-xs bg-white border border-zinc-200 hover:border-zinc-300 focus:border-[color:var(--theme-accent)] rounded-full outline-none transition-all w-32 focus:w-40 placeholder-zinc-400 text-zinc-700 font-medium" onKeyDown={(e) => { if (e.key === 'Enter' && e.target.value.trim()) { const newTag = e.target.value.replace(/#/g, '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, ''); if (newTag && !selectedEntry.tags?.includes(newTag)) { const updated = entries.map(ent => ent.id === selectedEntry.id ? { ...ent, tags: [...(ent.tags || []), newTag] } : ent); setEntries(updated); } e.target.value = ''; } }} />
                       </div>
                     </div>
                   </div>
+
+                  {/* Core Editor */}
                   <RichTextEditor content={selectedEntry.content} accessToken={accessToken} folderId={driveFolderId} onChange={(html) => { const updated = entries.map(ent => ent.id === selectedEntry.id ? { ...ent, content: html } : ent); setEntries(updated); }} onShowMessage={(msg) => setModalConfig({ type: 'alert', title: 'Notice', message: msg, confirmText: 'Got it' })} />
                   
-                  {/* Invisible spacer block so you can't type below the editor, but can still scroll! */}
-                  <div className="h-32 md:h-[40vh] w-full shrink-0 pointer-events-none" />
+                  {/* Invisible spacer block */}
+                  <div className="h-32 w-full shrink-0 pointer-events-none" />
 
                 </div>
               ) : (
-                <div className="max-w-2xl w-full h-full flex flex-col items-center justify-center text-zinc-400 animate-in fade-in duration-500"><Book size={48} className="mb-4 opacity-20" /><p>No entry selected{activeJournal ? ` in ${activeJournal.name}` : ''}.</p><button onClick={handleCreateEntry} className="mt-6 px-6 py-2.5 bg-[color:var(--theme-primary)] hover:bg-primary-dark transition-colors text-[color:var(--theme-secondary)] rounded-full text-sm font-bold flex items-center gap-2 shadow-lg"><Plus size={16} /> Create New Entry</button></div>
+                <div className="max-w-2xl w-full h-full flex flex-col items-center justify-center text-zinc-400 animate-in fade-in duration-500"><Book size={48} className="mb-4 opacity-20" /><p>No entry selected{activeJournal ? ` in ${activeJournal.name}` : ''}.</p><button onClick={handleCreateEntry} className="mt-6 px-6 py-2.5 bg-[color:var(--theme-primary)] hover:bg-primary-dark transition-colors text-white rounded-full text-sm font-bold flex items-center gap-2 shadow-lg"><Plus size={16} /> Create New Entry</button></div>
               )}
             </div>
           </main>
@@ -1707,13 +1777,13 @@ const App = () => {
   };
 
   return (
-    <div className={`flex h-[100dvh] w-full overflow-hidden ${isDarkMode ? 'bg-zinc-950 text-white' : 'bg-[#F8F9FA] text-zinc-900'}`}>
+    <div className={`flex h-[100dvh] w-full overflow-hidden texture-bg ${themeMode === 'dark' ? 'bg-zinc-950 text-white' : themeMode === 'golden' ? 'theme-golden' : 'bg-[color:var(--theme-secondary)] text-zinc-900'}`}>
       <style dangerouslySetInnerHTML={{ __html: dynamicCss }} />
 
       {isLocked ? (
         <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-900 absolute inset-0 z-50 px-6">
           <div className="w-16 h-16 bg-[color:var(--theme-primary)] rounded-2xl flex items-center justify-center mb-8 shadow-2xl">
-            <Lock size={32} className="text-[color:var(--theme-secondary)]" />
+            <Lock size={32} className="text-white" />
           </div>
           <h1 className="text-3xl font-extrabold text-white mb-2 tracking-tight">Vault Locked</h1>
           <p className="text-zinc-400 mb-8 text-sm">Enter your PIN to access Epektasis.</p>
@@ -1742,7 +1812,7 @@ const App = () => {
       ) : (
         <>
           {/* SIDEBAR */}
-          <aside className={`${isSidebarOpen ? 'w-64' : 'w-0'} bg-[color:var(--theme-primary)] transition-all duration-300 flex flex-col absolute md:relative z-40 h-full overflow-hidden shadow-2xl shrink-0`}>
+          <aside className={`${isSidebarOpen && !isZenMode ? 'w-64' : 'w-0'} bg-[color:var(--theme-primary)] transition-all duration-500 ease-in-out flex flex-col absolute md:relative z-40 h-full overflow-hidden shadow-2xl shrink-0`}>
             <div className="p-6 flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-[color:var(--theme-secondary)] flex items-center justify-center shrink-0"><BrainCircuit size={20} className="text-[color:var(--theme-primary)]" /></div>
               <h1 className="text-sidebar-hover font-bold tracking-tight text-lg">Epektasis</h1>
@@ -1807,14 +1877,14 @@ const App = () => {
               })}
             </div>
 
-            <div className="p-4 border-t border-white/10 bg-primary-dark">
+            <div className="p-4 border-t border-white/10 bg-black/10">
               <SidebarItem icon={Settings} label="System Settings" active={activeView === 'settings'} onClick={() => { setActiveView('settings'); setShowMobileDetail(true); if(window.innerWidth < 768) setSidebarOpen(false); }} />
             </div>
           </aside>
 
           {/* DYNAMIC LIST PANEL */}
           {(activeView === 'entries' || activeView === 'bookmarks' || activeView === 'templates') && (
-            <div className={`w-full md:w-80 border-r ${isDarkMode ? 'border-zinc-800 bg-zinc-950' : 'border-zinc-200 bg-white'} ${showMobileDetail ? 'hidden md:flex' : 'flex'} flex-col shadow-sm z-10 shrink-0`}>
+            <div className={`w-full md:w-80 border-r ${themeMode === 'dark' ? 'border-zinc-800 bg-zinc-950' : 'border-zinc-200 bg-[#FBF8F1]'} ${showMobileDetail ? 'hidden md:flex' : 'flex'} ${isZenMode ? 'md:hidden w-0 opacity-0 overflow-hidden border-none' : ''} flex-col shadow-sm z-10 shrink-0 transition-all duration-500 ease-in-out`}>
               <div className="p-4 border-b border-zinc-200/50 flex flex-col gap-4">
                 <div className="flex justify-between items-start">
                   <div className="flex-1 min-w-0 pr-2">
@@ -1839,22 +1909,22 @@ const App = () => {
                     ) : ( <h2 className="font-bold text-xl truncate">Saved Templates</h2> )}
                   </div>
                   <div className="flex items-center gap-0.5 shrink-0">
-                    <button onClick={() => { setActiveView('home'); setArchiveFilter(null); setTagFilter(null); setShowMobileDetail(false); }} className="p-1.5 hover:bg-zinc-100 rounded-md transition-colors text-zinc-400 hover:text-zinc-900" title="Go Home"><Home size={16} /></button>
-                    {(activeView === 'entries' || activeView === 'bookmarks') && <button onClick={() => handleExportPDF(filteredEntries, activeView === 'bookmarks' ? 'Bookmarked Entries' : (archiveFilter ? `Archive: ${archiveFilter.month || ''} ${archiveFilter.year}` : activeJournal ? `Journal: ${activeJournal.name}` : 'All Entries'))} className="p-1.5 hover:bg-zinc-100 rounded-md transition-colors text-zinc-400 hover:text-zinc-900" title="Export List to PDF"><Download size={16} /></button>}
-                    {activeView === 'entries' && !archiveFilter && !tagFilter && activeJournal && <button onClick={() => handleDeleteJournal(activeJournal.id)} className="p-1.5 hover:bg-red-50 rounded-md transition-colors text-zinc-400 hover:text-red-600" title="Delete Journal"><Trash2 size={16} /></button>}
-                    <button onClick={() => setSidebarOpen(!isSidebarOpen)} className="p-1.5 hover:bg-zinc-100 rounded-md transition-colors text-zinc-400 hover:text-zinc-900" title="Toggle Sidebar"><Menu size={18} /></button>
+                    <button onClick={() => { setActiveView('home'); setArchiveFilter(null); setTagFilter(null); setShowMobileDetail(false); }} className="p-1.5 hover:bg-white rounded-md transition-colors text-zinc-400 hover:text-zinc-900 hover:shadow-sm" title="Go Home"><Home size={16} /></button>
+                    {(activeView === 'entries' || activeView === 'bookmarks') && <button onClick={() => handleExportPDF(filteredEntries, activeView === 'bookmarks' ? 'Bookmarked Entries' : (archiveFilter ? `Archive: ${archiveFilter.month || ''} ${archiveFilter.year}` : activeJournal ? `Journal: ${activeJournal.name}` : 'All Entries'))} className="p-1.5 hover:bg-white rounded-md transition-colors text-zinc-400 hover:text-zinc-900 hover:shadow-sm" title="Export List to PDF"><Download size={16} /></button>}
+                    {activeView === 'entries' && !archiveFilter && !tagFilter && activeJournal && <button onClick={() => handleDeleteJournal(activeJournal.id)} className="p-1.5 hover:bg-red-50 rounded-md transition-colors text-zinc-400 hover:text-red-600 hover:shadow-sm" title="Delete Journal"><Trash2 size={16} /></button>}
+                    <button onClick={() => setSidebarOpen(!isSidebarOpen)} className="p-1.5 hover:bg-white rounded-md transition-colors text-zinc-400 hover:text-zinc-900 hover:shadow-sm" title="Toggle Sidebar"><Menu size={18} /></button>
                   </div>
                 </div>
                 
                 {(activeView === 'entries' || activeView === 'bookmarks') && (
-                  <div className="relative mt-1">
+                  <div className="relative mt-1 shadow-sm rounded-full">
                     <Search className="absolute left-3 top-2.5 text-zinc-400" size={16} />
-                    <input type="text" placeholder="Search tags or text..." className={`w-full pl-10 pr-4 py-2 text-sm rounded-full ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-zinc-100 border-transparent'} focus-ring-accent outline-none transition-all`} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                    <input type="text" placeholder="Search tags or text..." className={`w-full pl-10 pr-4 py-2 text-sm rounded-full ${themeMode === 'dark' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'} focus-ring-accent outline-none transition-all`} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
                   </div>
                 )}
               </div>
 
-              <div className={`flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar ${isDarkMode ? 'bg-zinc-950' : 'bg-zinc-50/80'}`}>
+              <div className={`flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar ${themeMode === 'dark' ? 'bg-zinc-950' : 'bg-transparent'}`}>
                 {(activeView === 'entries' || activeView === 'bookmarks') && (filteredEntries.length > 0 ? (
                   filteredEntries.map(entry => {
                     const entryMoodObj = MOODS.find(m => m.id === entry.mood) || MOODS.find(m => m.id === 'neutral');
@@ -1867,10 +1937,11 @@ const App = () => {
                       <button 
                         key={entry.id} 
                         onClick={() => { setSelectedEntryId(entry.id); setShowMobileDetail(true); }} 
-                        className={`w-full text-left p-4 rounded-3xl transition-all relative overflow-hidden border shadow-sm ${
+                        // Updated List card styling for improved tactile response
+                        className={`w-full text-left p-5 rounded-3xl transition-all duration-300 relative overflow-hidden shadow-sm ${
                           isSelected 
-                            ? `border-[color:var(--theme-primary)] ring-1 ring-[color:var(--theme-primary)] ${isDarkMode ? 'bg-zinc-900' : 'bg-white'}`
-                            : `border-zinc-200/70 hover:border-zinc-300 hover:shadow-md ${isDarkMode ? 'bg-zinc-900/50' : 'bg-white'}`
+                            ? `border-none ring-2 ring-offset-2 ring-[color:var(--theme-primary)] ${themeMode === 'dark' ? 'bg-zinc-800' : 'bg-white'}`
+                            : `border border-zinc-100 hover:border-zinc-300 hover:shadow-md ${themeMode === 'dark' ? 'bg-zinc-900/50' : 'bg-white'}`
                         }`}
                       >
                         {entry.isBookmarked && (
@@ -1879,13 +1950,11 @@ const App = () => {
                            </div>
                         )}
                         <div className="flex gap-4">
-                          {/* Date as Art */}
                           <div className="flex flex-col items-center justify-start pt-1 min-w-[2.5rem]">
                             <span className={`font-serif text-3xl font-extrabold leading-none ${isSelected ? 'text-[color:var(--theme-primary)]' : 'text-zinc-800'}`}>{day}</span>
                             <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-1">{month}</span>
                           </div>
                           
-                          {/* Content Block */}
                           <div className="flex-1 min-w-0 pr-4">
                             <div className="flex items-center gap-2 mb-1.5">
                               <h3 className={`font-bold text-base leading-tight truncate ${isSelected ? 'text-[color:var(--theme-primary)]' : 'text-zinc-800'}`}>{entry.title || 'Untitled Entry'}</h3>
@@ -1894,7 +1963,7 @@ const App = () => {
                             <p className="text-xs text-zinc-500 line-clamp-2 leading-relaxed">{entry.content ? entry.content.replace(/<[^>]+>/g, '').substring(0, 100) : 'Empty entry...'}</p>
                             {entry.tags && entry.tags.length > 0 && (
                               <div className="flex gap-1.5 mt-3 overflow-hidden flex-wrap">
-                                {entry.tags.slice(0, 3).map(tag => ( <span key={tag} className="text-[10px] font-bold px-2 py-0.5 rounded-full text-[color:var(--theme-primary)] bg-[color:var(--theme-primary)]/10 truncate max-w-[80px]">#{tag}</span> ))}
+                                {entry.tags.slice(0, 3).map(tag => ( <span key={tag} className="text-[10px] font-bold px-2 py-0.5 rounded-full text-[color:var(--theme-primary)] bg-[color:var(--theme-primary)]/10 border border-[color:var(--theme-primary)]/20 truncate max-w-[80px]">#{tag}</span> ))}
                                 {entry.tags.length > 3 && <span className="text-[10px] font-bold text-zinc-400 py-0.5">+{entry.tags.length - 3}</span>}
                               </div>
                             )}
@@ -1903,7 +1972,7 @@ const App = () => {
                       </button>
                     );
                   })
-                ) : ( <div className="p-8 text-center text-zinc-400 italic text-sm bg-white rounded-3xl border border-dashed border-zinc-200">No entries found.</div> ))}
+                ) : ( <div className="p-8 text-center text-zinc-400 italic text-sm bg-white rounded-3xl border border-dashed border-zinc-200 shadow-sm">No entries found.</div> ))}
 
                 {activeView === 'templates' && (templates.length > 0 ? (
                   templates.map(template => {
@@ -1912,10 +1981,10 @@ const App = () => {
                       <button 
                         key={template.id} 
                         onClick={() => { setSelectedTemplateId(template.id); setShowMobileDetail(true); }} 
-                        className={`w-full text-left p-4 rounded-3xl transition-all relative overflow-hidden border shadow-sm flex gap-4 ${
+                        className={`w-full text-left p-5 rounded-3xl transition-all duration-300 relative overflow-hidden shadow-sm flex gap-4 ${
                           isSelected 
-                            ? `border-[color:var(--theme-primary)] ring-1 ring-[color:var(--theme-primary)] ${isDarkMode ? 'bg-zinc-900' : 'bg-white'}`
-                            : `border-zinc-200/70 hover:border-zinc-300 hover:shadow-md ${isDarkMode ? 'bg-zinc-900/50' : 'bg-white'}`
+                            ? `border-none ring-2 ring-offset-2 ring-[color:var(--theme-primary)] ${themeMode === 'dark' ? 'bg-zinc-800' : 'bg-white'}`
+                            : `border border-zinc-100 hover:border-zinc-300 hover:shadow-md ${themeMode === 'dark' ? 'bg-zinc-900/50' : 'bg-white'}`
                         }`}
                       >
                         <div className="flex flex-col items-center justify-start pt-1 min-w-[2.5rem]">
@@ -1928,9 +1997,9 @@ const App = () => {
                       </button>
                     )
                   })
-                ) : ( <div className="p-8 text-center text-zinc-400 italic text-sm bg-white rounded-3xl border border-dashed border-zinc-200">No templates saved.</div> ))}
+                ) : ( <div className="p-8 text-center text-zinc-400 italic text-sm bg-white rounded-3xl border border-dashed border-zinc-200 shadow-sm">No templates saved.</div> ))}
 
-                <button onClick={activeView === 'entries' ? handleCreateEntry : handleCreateTemplate} className="w-full py-6 text-sm text-zinc-400 font-medium hover:text-[color:var(--theme-primary)] flex flex-col items-center gap-2 transition-colors rounded-3xl border-2 border-dashed border-zinc-200 hover:border-[color:var(--theme-primary)] hover:bg-[color:var(--theme-primary)]/5 mt-4">
+                <button onClick={activeView === 'entries' ? handleCreateEntry : handleCreateTemplate} className="w-full py-6 text-sm text-zinc-400 font-medium hover:text-[color:var(--theme-primary)] flex flex-col items-center gap-2 transition-colors rounded-3xl border-2 border-dashed border-zinc-200 hover:border-[color:var(--theme-primary)] hover:bg-[color:var(--theme-primary)]/5 mt-4 bg-white/50">
                   <div className="p-2"><Plus size={20} /></div>
                   {(activeView === 'entries' || activeView === 'bookmarks') ? 'New Entry' : 'New Template'}
                 </button>
@@ -1944,14 +2013,14 @@ const App = () => {
           {/* TEMPLATE PICKER MODAL */}
           {showTemplatePicker && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-              <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-200 mx-4 flex flex-col max-h-[80vh]">
-                <div className="flex justify-between items-center mb-6 shrink-0">
-                  <div className="flex items-center gap-3"><div className="p-2 bg-[color:var(--theme-primary)] rounded-lg text-[color:var(--theme-secondary)]"><LayoutTemplate size={18} /></div><h3 className="font-bold text-lg text-zinc-900">Insert Template</h3></div>
+              <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-200 mx-4 flex flex-col max-h-[80vh]">
+                <div className="flex justify-between items-center mb-6 shrink-0 border-b border-zinc-100 pb-4">
+                  <div className="flex items-center gap-3"><div className="p-2 bg-[color:var(--theme-primary)] rounded-xl text-white shadow-sm"><LayoutTemplate size={18} /></div><h3 className="font-bold text-lg text-zinc-900">Insert Template</h3></div>
                   <button onClick={() => setShowTemplatePicker(false)} className="p-1 hover:bg-zinc-100 rounded-full text-zinc-500 transition-colors"><X size={20} /></button>
                 </div>
                 <div className="space-y-3 overflow-y-auto custom-scrollbar pr-2 flex-1">
                   {templates.map(t => (
-                    <button key={t.id} onClick={() => applyTemplateToEntry(t)} className="w-full text-left p-4 rounded-xl border border-zinc-200 hover:border-[color:var(--theme-primary)] hover:bg-zinc-50 transition-colors group">
+                    <button key={t.id} onClick={() => applyTemplateToEntry(t)} className="w-full text-left p-4 rounded-2xl border border-zinc-200 hover:border-[color:var(--theme-primary)] hover:shadow-md hover:-translate-y-0.5 transition-all bg-zinc-50 hover:bg-white group">
                       <h4 className="font-bold text-zinc-800 group-hover:text-[color:var(--theme-primary)]">{t.name}</h4>
                       <p className="text-xs text-zinc-500 line-clamp-2 mt-1">{t.content.replace(/<[^>]+>/g, '')}</p>
                     </button>
@@ -1966,8 +2035,8 @@ const App = () => {
 
       {/* CUSTOM MODAL ENGINE */}
       {modalConfig && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-zinc-900/60 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200 mx-4">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-zinc-900/60 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200 mx-4 border border-zinc-100">
             <h3 className="font-bold text-lg mb-2 text-zinc-900">{modalConfig.title || 'Attention'}</h3>
             <p className="text-zinc-600 mb-6 text-sm leading-relaxed">{modalConfig.message}</p>
             <div className="flex justify-end gap-3">
