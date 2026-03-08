@@ -583,9 +583,13 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
         }}
         onKeyUp={saveSelection}
         onKeyDown={handleKeyDown}
-        className="px-6 py-8 md:px-12 md:py-16 min-h-[500px] md:h-[65vh] md:overflow-y-auto custom-scrollbar outline-none rte-content font-serif bg-white"
+        className="px-6 pt-8 pb-32 md:px-12 md:pt-16 md:pb-64 min-h-[500px] md:h-[65vh] md:overflow-y-auto custom-scrollbar outline-none rte-content font-serif bg-white"
         placeholder="Begin your reflection..."
       />
+      {/* Solid bar underneath the editor to keep text from touching bottom */}
+      <div className="h-10 w-full bg-zinc-50 border-t border-zinc-200 shrink-0 flex items-center justify-center text-[10px] text-zinc-400 font-bold uppercase tracking-widest relative z-20">
+        End of Entry
+      </div>
     </div>
   );
 };
@@ -1044,7 +1048,7 @@ const App = () => {
     });
   };
 
-  const handleExportPDF = (entriesToExport, documentTitle) => {
+  const handleExportPDF = (entriesToExport, documentTitle, sortOrder = 'desc') => {
     if (!entriesToExport || entriesToExport.length === 0) {
       setModalConfig({ type: 'alert', title: 'Export Failed', message: 'There are no entries to export.', confirmText: 'Okay' });
       return;
@@ -1054,6 +1058,14 @@ const App = () => {
       setModalConfig({ type: 'alert', title: 'Popup Blocked', message: 'Please allow popups to generate the PDF.', confirmText: 'Got it' });
       return;
     }
+
+    const sortedEntries = [...entriesToExport].sort((a, b) => {
+      if (sortOrder === 'asc') {
+        return new Date(a.createdAt) - new Date(b.createdAt);
+      } else {
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      }
+    });
 
     const uiFontStack = themeConfig.uiFont === 'system-ui' ? 'system-ui, sans-serif' : `'${themeConfig.uiFont}', sans-serif`;
     const docFontStack = themeConfig.docFont === 'system-ui' ? 'system-ui, serif' : `'${themeConfig.docFont}', serif`;
@@ -1081,9 +1093,9 @@ const App = () => {
         <body>
           <div class="header-block">
             <h1>${documentTitle}</h1>
-            <div class="export-meta">Generated from Epektasis OS • ${entriesToExport.length} Entries</div>
+            <div class="export-meta">Generated from Epektasis OS • ${sortedEntries.length} Entries</div>
           </div>
-          ${entriesToExport.map(entry => `
+          ${sortedEntries.map(entry => `
             <div class="entry">
               <div class="entry-title">${entry.title || 'Untitled Entry'}</div>
               <div class="entry-meta">${new Date(entry.createdAt).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} • Mood: ${entry.mood}</div>
@@ -1952,7 +1964,35 @@ const App = () => {
                   </div>
                   <div className="flex items-center gap-0.5 shrink-0">
                     <button onClick={() => { setActiveView('home'); setArchiveFilter(null); setTagFilter(null); setShowMobileDetail(false); }} className="p-1.5 hover:bg-white rounded-md transition-colors text-zinc-400 hover:text-zinc-900 hover:shadow-sm" title="Go Home"><Home size={16} /></button>
-                    {(activeView === 'entries' || activeView === 'bookmarks') && <button onClick={() => handleExportPDF(filteredEntries, activeView === 'bookmarks' ? 'Bookmarked Entries' : (archiveFilter ? `Archive: ${archiveFilter.month || ''} ${archiveFilter.year}` : activeJournal ? `Journal: ${activeJournal.name}` : 'All Entries'))} className="p-1.5 hover:bg-white rounded-md transition-colors text-zinc-400 hover:text-zinc-900 hover:shadow-sm" title="Export List to PDF"><Download size={16} /></button>}
+                    {(activeView === 'entries' || activeView === 'bookmarks') && (
+                      <button 
+                        onClick={() => {
+                          const listExportTitle = activeView === 'bookmarks' ? 'Bookmarked Entries' : (archiveFilter ? `Archive: ${archiveFilter.month || ''} ${archiveFilter.year}` : activeJournal ? `Journal: ${activeJournal.name}` : 'All Entries');
+                          setModalConfig({
+                            title: 'Export Settings',
+                            message: 'Choose how you want your entries ordered in the PDF.',
+                            type: 'custom',
+                            content: (
+                              <div className="flex flex-col gap-3 mt-4">
+                                <button onClick={() => { handleExportPDF(filteredEntries, listExportTitle, 'desc'); setModalConfig(null); }} className="px-4 py-3 border border-zinc-200 rounded-xl hover:bg-zinc-50 hover:border-[color:var(--theme-primary)] text-left flex flex-col transition-colors">
+                                  <span className="font-bold text-zinc-900">Newest to Oldest</span>
+                                  <span className="text-xs text-zinc-500">Most recent entries first</span>
+                                </button>
+                                <button onClick={() => { handleExportPDF(filteredEntries, listExportTitle, 'asc'); setModalConfig(null); }} className="px-4 py-3 border border-zinc-200 rounded-xl hover:bg-zinc-50 hover:border-[color:var(--theme-primary)] text-left flex flex-col transition-colors">
+                                  <span className="font-bold text-zinc-900">Oldest to Newest</span>
+                                  <span className="text-xs text-zinc-500">Chronological reading order</span>
+                                </button>
+                              </div>
+                            ),
+                            hideActions: true
+                          });
+                        }} 
+                        className="p-1.5 hover:bg-white rounded-md transition-colors text-zinc-400 hover:text-zinc-900 hover:shadow-sm" 
+                        title="Export List to PDF"
+                      >
+                        <Download size={16} />
+                      </button>
+                    )}
                     {activeView === 'entries' && !archiveFilter && !tagFilter && activeJournal && <button onClick={() => handleDeleteJournal(activeJournal.id)} className="p-1.5 hover:bg-red-50 rounded-md transition-colors text-zinc-400 hover:text-red-600 hover:shadow-sm" title="Delete Journal"><Trash2 size={16} /></button>}
                     <button onClick={() => setSidebarOpen(!isSidebarOpen)} className="p-1.5 hover:bg-white rounded-md transition-colors text-zinc-400 hover:text-zinc-900 hover:shadow-sm" title="Toggle Sidebar"><Menu size={18} /></button>
                   </div>
@@ -2079,12 +2119,20 @@ const App = () => {
       {modalConfig && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-zinc-900/60 backdrop-blur-md animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200 mx-4 border border-zinc-100">
-            <h3 className="font-heading font-bold text-lg mb-2 text-zinc-900">{modalConfig.title || 'Attention'}</h3>
-            <p className="text-zinc-600 mb-6 text-sm leading-relaxed">{modalConfig.message}</p>
-            <div className="flex justify-end gap-3">
-              {modalConfig.type === 'confirm' && <button onClick={() => setModalConfig(null)} className="px-4 py-2 rounded-xl text-sm font-semibold text-zinc-600 hover:bg-zinc-100 transition-colors">Cancel</button>}
-              <button onClick={() => { modalConfig.onConfirm?.(); setModalConfig(null); }} className={`px-4 py-2 rounded-xl text-sm font-bold text-white transition-colors shadow-sm ${modalConfig.isDestructive ? 'bg-red-600 hover:bg-red-700 shadow-black/10' : 'bg-[color:var(--theme-primary)] hover:bg-primary-dark shadow-black/10'}`}>{modalConfig.confirmText || 'OK'}</button>
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="font-heading font-bold text-lg text-zinc-900">{modalConfig.title || 'Attention'}</h3>
+              {modalConfig.hideActions && <button onClick={() => setModalConfig(null)} className="text-zinc-400 hover:text-zinc-700"><X size={18}/></button>}
             </div>
+            {modalConfig.message && <p className={`text-zinc-600 text-sm leading-relaxed ${modalConfig.content ? 'mb-4' : 'mb-6'}`}>{modalConfig.message}</p>}
+            
+            {modalConfig.content}
+
+            {!modalConfig.hideActions && (
+              <div className="flex justify-end gap-3 mt-6">
+                {modalConfig.type === 'confirm' && <button onClick={() => setModalConfig(null)} className="px-4 py-2 rounded-xl text-sm font-semibold text-zinc-600 hover:bg-zinc-100 transition-colors">Cancel</button>}
+                <button onClick={() => { modalConfig.onConfirm?.(); setModalConfig(null); }} className={`px-4 py-2 rounded-xl text-sm font-bold text-white transition-colors shadow-sm ${modalConfig.isDestructive ? 'bg-red-600 hover:bg-red-700 shadow-black/10' : 'bg-[color:var(--theme-primary)] hover:bg-primary-dark shadow-black/10'}`}>{modalConfig.confirmText || 'OK'}</button>
+              </div>
+            )}
           </div>
         </div>
       )}
