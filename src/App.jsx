@@ -1,28 +1,21 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
-  Home, Plus, Search,
-  Book, Calendar, Tag, Settings, ChevronRight, ChevronLeft,
+  Home, Plus, Search, Book, Calendar, Tag, Settings, ChevronRight, ChevronLeft,
   MoreVertical, Image as ImageIcon, Mic, Smile, Meh, Frown, Mountain, Archive,
-  Trash2, FileText,
-  BarChart3, BrainCircuit, Maximize2, Clock, Save, Moon, Sun,
-  X, CheckCircle2,
-  AlertCircle, Menu, Download, Lock, Unlock, LogOut, Share2, History,
-  ChevronDown, Bookmark,
-  Edit2, Bold, Italic,
-  Underline, Heading1, Heading2, Heading3, List, ListOrdered,
-  ImagePlus,
-  AlignLeft, AlignCenter, AlignRight, LayoutTemplate, Palette, Hash, 
-  Cloud, CloudOff,
-  Highlighter, Type, HelpCircle, Quote
+  Trash2, FileText, BarChart3, BrainCircuit, Maximize2, Clock, Save, Moon, Sun,
+  X, CheckCircle2, AlertCircle, Menu, Download, Lock, Unlock, LogOut, Share2, History,
+  ChevronDown, Bookmark, Edit2, Bold, Italic, Underline, Heading1, Heading2, Heading3, 
+  List, ListOrdered, ImagePlus, AlignLeft, AlignCenter, AlignRight, LayoutTemplate, 
+  Palette, Hash, Cloud, CloudOff, Highlighter, Type, HelpCircle, Quote
 } from 'lucide-react';
 
 /**
  * Epektasis Theme Defaults - Premium, grounded feel
  */
 const DEFAULT_THEME = {
-  primary: '#2C4030',   // Deeper, richer forest green
-  secondary: '#FBF8F1', // Softer, warmer off-white for reduced eye strain
-  accent: '#7B8C98',    // Muted, elegant slate
+  primary: '#4A5D4E',   // Sage
+  secondary: '#FDFBF7', // Oat
+  accent: '#7B8C98',    // Slate
   sidebarText: '#EAEAEA',
   uiFont: 'Inter',
   docFont: 'Charter'
@@ -84,7 +77,6 @@ const INITIAL_TEMPLATES = [
 ];
 
 // --- Sub-Components ---
-
 const SidebarItem = ({ icon: Icon, label, active, onClick, badge }) => (
   <button 
     onClick={onClick}
@@ -120,19 +112,19 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
   const [isRecording, setIsRecording] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const recognitionRef = useRef(null);
-
+  
   // Highlighter & Font Size State
   const [showHighlightMenu, setShowHighlightMenu] = useState(false);
   const highlightMenuRef = useRef(null);
   const [showTextSizeMenu, setShowTextSizeMenu] = useState(false);
   const textSizeMenuRef = useRef(null);
-
+  
   useEffect(() => {
     if (editorRef.current && editorRef.current.innerHTML !== content) {
       editorRef.current.innerHTML = content || '';
     }
   }, [content]);
-
+  
   useEffect(() => {
     return () => {
       if (recognitionRef.current) {
@@ -140,7 +132,7 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
       }
     };
   }, []);
-
+  
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (highlightMenuRef.current && !highlightMenuRef.current.contains(event.target)) {
@@ -153,14 +145,14 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
+  
   const saveSelection = () => {
     const selection = window.getSelection();
     if (selection.rangeCount > 0) {
       savedRange.current = selection.getRangeAt(0);
     }
   };
-
+  
   const restoreSelection = () => {
     if (editorRef.current) {
       editorRef.current.focus();
@@ -171,14 +163,14 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
       }
     }
   };
-
+  
   const exec = (command, value = null) => {
     restoreSelection();
     document.execCommand(command, false, value);
     saveSelection();
     onChange(editorRef.current?.innerHTML || '');
   };
-
+  
   const toggleFormatBlock = (tag) => {
     restoreSelection();
     let node = window.getSelection().anchorNode;
@@ -205,7 +197,7 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
     saveSelection();
     onChange(editorRef.current?.innerHTML || '');
   };
-
+  
   const applyHighlight = (color) => {
     restoreSelection();
     document.execCommand('backColor', false, color);
@@ -213,7 +205,7 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
     onChange(editorRef.current.innerHTML);
     setShowHighlightMenu(false);
   };
-
+  
   const applyFontSize = (size) => {
     restoreSelection();
     document.execCommand('fontSize', false, size);
@@ -221,7 +213,7 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
     onChange(editorRef.current.innerHTML);
     setShowTextSizeMenu(false);
   };
-
+  
   const handleImage = async (e) => {
     const file = e.target.files[0];
     const inputTarget = e.target;
@@ -277,7 +269,7 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
       inputTarget.value = ''; 
     }
   };
-
+  
   const handleEditorClick = (e) => {
     if (e.target.tagName === 'IMG') {
       setSelectedImage(e.target);
@@ -286,7 +278,7 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
     }
     saveSelection();
   };
-
+  
   const resizeImage = (widthPercentage) => {
     if (selectedImage) {
       selectedImage.style.width = widthPercentage;
@@ -294,7 +286,7 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
       onChange(editorRef.current.innerHTML);
     }
   };
-
+  
   const alignImage = (alignment) => {
     if (selectedImage) {
       if (alignment === 'center') {
@@ -313,7 +305,7 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
       onChange(editorRef.current.innerHTML);
     }
   };
-
+  
   const deleteSelectedImage = async () => {
     if (selectedImage) {
       const imgSrc = selectedImage.getAttribute('src');
@@ -336,7 +328,7 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
       }
     }
   };
-
+  
   const toggleDictation = () => {
     if (isRecording) {
       recognitionRef.current?.stop();
@@ -393,7 +385,7 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
       onShowMessage?.('Failed to start dictation. The microphone may be in use or permissions are not properly configured.');
     }
   };
-
+  
   const ToolbarButton = ({ icon: Icon, onClick, title, className = "" }) => (
     <button
       onMouseDown={(e) => e.preventDefault()}
@@ -404,10 +396,10 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
       <Icon size={16} />
     </button>
   );
-
+  
   return (
     <div className="flex flex-col border-2 border-[color:var(--theme-secondary)] rounded-2xl overflow-hidden bg-white shadow-sm mt-4 relative z-10">
-      {/* Editor Toolbar: Pill shaped groups for less clutter */}
+      {/* Editor Toolbar */}
       <div className="flex flex-wrap items-center gap-2 p-2 border-b border-[color:var(--theme-secondary)] bg-zinc-50/80 backdrop-blur min-h-[52px]">
         {selectedImage ? (
           <div className="flex items-center gap-2 px-2 animate-in fade-in duration-200 w-full overflow-x-auto pb-1">
@@ -570,7 +562,7 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
           setTimeout(() => setSelectedImage(null), 150);
         }}
         onKeyUp={saveSelection}
-        className="px-6 py-8 md:px-12 md:py-16 min-h-[500px] md:h-[65vh] md:overflow-y-auto custom-scrollbar outline-none rte-content font-serif text-lg bg-white"
+        className="px-6 py-8 md:px-12 md:py-16 min-h-[500px] md:h-[65vh] md:overflow-y-auto custom-scrollbar outline-none rte-content font-serif bg-white"
         placeholder="Begin your reflection..."
       />
     </div>
@@ -578,7 +570,6 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
 };
 
 // --- Main Application ---
-
 const App = () => {
   // Data State
   const [entries, setEntries] = useState(() => {
@@ -598,6 +589,7 @@ const App = () => {
     const saved = localStorage.getItem('epektasis_templates');
     return saved ? JSON.parse(saved) : INITIAL_TEMPLATES;
   });
+  
   const [themeConfig, setThemeConfig] = useState(() => {
     const saved = localStorage.getItem('epektasis_theme');
     return saved ? { ...DEFAULT_THEME, ...JSON.parse(saved) } : DEFAULT_THEME;
@@ -741,8 +733,8 @@ const App = () => {
       const matchesJournal = (activeJournal && activeView !== 'bookmarks') ? e.journalId === activeJournal.id : true;
       const lowerQuery = searchQuery.toLowerCase();
       const matchesSearch = e.title.toLowerCase().includes(lowerQuery) || 
-                             e.content.toLowerCase().includes(lowerQuery) ||
-                             (e.tags && e.tags.some(t => t.includes(lowerQuery)));
+                            e.content.toLowerCase().includes(lowerQuery) ||
+                            (e.tags && e.tags.some(t => t.includes(lowerQuery)));
       
       let matchesArchive = true;
       if (archiveFilter && activeView !== 'bookmarks') {
@@ -1111,6 +1103,14 @@ const App = () => {
       --theme-sidebar-text: ${themeConfig.sidebarText};
       --font-ui: ${uiFontStack};
       --font-doc: ${docFontStack};
+
+      /* FLUID TYPOGRAPHY VARIABLES */
+      --fluid-base: clamp(1.05rem, 1vw + 0.8rem, 1.25rem);
+      --fluid-h3: clamp(1.3rem, 1.5vw + 1rem, 1.75rem);
+      --fluid-h2: clamp(1.6rem, 2.5vw + 1rem, 2.25rem);
+      --fluid-h1: clamp(2rem, 4vw + 1rem, 3rem);
+      --fluid-title: clamp(2.25rem, 5vw + 1rem, 3.5rem);
+      --fluid-greeting: clamp(2.5rem, 6vw + 1rem, 4rem);
     }
     ::selection { background-color: color-mix(in srgb, var(--theme-accent) 25%, transparent); color: inherit; }
     ::-moz-selection { background-color: color-mix(in srgb, var(--theme-accent) 25%, transparent); color: inherit; }
@@ -1128,6 +1128,10 @@ const App = () => {
     .hover\\:text-sidebar-hover:hover { color: var(--theme-sidebar-text) !important; }
     .text-sidebar-muted { color: color-mix(in srgb, var(--theme-sidebar-text) 40%, transparent) !important; }
     
+    /* FLUID TITLE CLASSES */
+    .fluid-title { font-size: var(--fluid-title); line-height: 1.1; }
+    .fluid-greeting { font-size: var(--fluid-greeting); line-height: 1.1; letter-spacing: -0.02em; }
+
     /* REFINED EDITOR TYPOGRAPHY */
     .rte-content { 
       font-family: var(--font-doc) !important; 
@@ -1136,10 +1140,11 @@ const App = () => {
       margin: 0 auto;  /* Centers the text block */
       line-height: 1.8; /* More breathing room */
       color: inherit;
+      font-size: var(--fluid-base);
     }
-    .rte-content h1 { font-family: var(--font-ui) !important; font-size: 2.5rem; font-weight: 800; margin-bottom: 1.5rem; margin-top: 2rem; letter-spacing: -0.02em; color: inherit; line-height: 1.2; }
-    .rte-content h2 { font-family: var(--font-ui) !important; font-size: 1.75rem; font-weight: 700; margin-bottom: 1rem; margin-top: 2rem; letter-spacing: -0.01em; color: inherit; line-height: 1.25; }
-    .rte-content h3 { font-family: var(--font-ui) !important; font-size: 1.25rem; font-weight: 600; margin-bottom: 0.75rem; margin-top: 1.5rem; color: inherit; line-height: 1.3; }
+    .rte-content h1 { font-family: var(--font-ui) !important; font-size: var(--fluid-h1); font-weight: 800; margin-bottom: 1.5rem; margin-top: 2rem; letter-spacing: -0.02em; color: inherit; line-height: 1.2; }
+    .rte-content h2 { font-family: var(--font-ui) !important; font-size: var(--fluid-h2); font-weight: 700; margin-bottom: 1rem; margin-top: 2rem; letter-spacing: -0.01em; color: inherit; line-height: 1.25; }
+    .rte-content h3 { font-family: var(--font-ui) !important; font-size: var(--fluid-h3); font-weight: 600; margin-bottom: 0.75rem; margin-top: 1.5rem; color: inherit; line-height: 1.3; }
     .rte-content blockquote { border-left: 3px solid var(--theme-accent); padding: 1rem 1.5rem; margin: 2rem 0; font-style: italic; color: inherit; opacity: 0.8; background-color: transparent; }
     .rte-content p { margin-bottom: 1.5rem; }
     .rte-content ul { list-style-type: disc; margin-left: 1.5rem; margin-bottom: 1.5rem; }
@@ -1199,7 +1204,7 @@ const App = () => {
                 <button onClick={() => setSidebarOpen(!isSidebarOpen)} className={`p-2 -ml-2 mb-4 text-zinc-500 hover:bg-zinc-200/50 rounded-full transition-colors ${isSidebarOpen ? 'md:hidden' : ''}`}>
                   <Menu size={24} />
                 </button>
-                <h1 className="text-4xl md:text-5xl font-extrabold text-zinc-900 tracking-tight">{greeting}.</h1>
+                <h1 className="fluid-greeting font-extrabold text-zinc-900 tracking-tight">{greeting}.</h1>
                 <p className="text-lg text-zinc-600 font-medium">Ready to capture your thoughts today?</p>
               </div>
 
@@ -1353,7 +1358,7 @@ const App = () => {
                   <div className="space-y-4 max-w-[65ch] mx-auto">
                     <input 
                       type="text" 
-                      className="w-full text-4xl font-extrabold tracking-tight text-zinc-900 border-none outline-none placeholder-zinc-300 bg-transparent text-center"
+                      className="w-full fluid-title font-extrabold tracking-tight text-zinc-900 border-none outline-none placeholder-zinc-300 bg-transparent text-center"
                       value={selectedTemplate.name || ''}
                       onChange={(e) => {
                         const updated = templates.map(t => t.id === selectedTemplate.id ? { ...t, name: e.target.value } : t);
@@ -1681,7 +1686,7 @@ const App = () => {
                     }}
                     className={`p-2 rounded-full transition-all flex items-center justify-center ${
                       selectedEntry.isBookmarked 
-                        ? 'text-[color:var(--theme-primary)] bg-[color:var(--theme-primary)]/10' 
+                        ? 'text-[color:var(--theme-primary)] bg-[color:var(--theme-primary)]/10'
                         : 'text-zinc-400 hover:bg-zinc-100'
                     } ${animateBookmark ? 'animate-pop' : ''}`}
                     title={selectedEntry.isBookmarked ? "Remove Bookmark" : "Bookmark Entry"}
@@ -1721,7 +1726,7 @@ const App = () => {
                   <div className="space-y-6 mb-8 max-w-[65ch] mx-auto">
                     <input 
                       type="text" 
-                      className="w-full text-4xl font-extrabold tracking-tight text-zinc-900 border-none outline-none placeholder-zinc-300 bg-transparent text-center" 
+                      className="w-full fluid-title font-extrabold tracking-tight text-zinc-900 border-none outline-none placeholder-zinc-300 bg-transparent text-center" 
                       value={selectedEntry.title || ''} 
                       onChange={(e) => { const updated = entries.map(ent => ent.id === selectedEntry.id ? { ...ent, title: e.target.value } : ent); setEntries(updated); }} 
                       placeholder="Entry Title" 
