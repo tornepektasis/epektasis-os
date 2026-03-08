@@ -1,12 +1,19 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
-  Home, Plus, Search, Book, Calendar, Tag, Settings, ChevronRight, ChevronLeft,
+  Home, Plus, Search,
+  Book, Calendar, Tag, Settings, ChevronRight, ChevronLeft,
   MoreVertical, Image as ImageIcon, Mic, Smile, Meh, Frown, Mountain, Archive,
-  Trash2, FileText, BarChart3, BrainCircuit, Maximize2, Clock, Save, Moon, Sun,
-  X, CheckCircle2, AlertCircle, Menu, Download, Lock, Unlock, LogOut, Share2, History, ChevronDown,
-  Edit2, Bold, Italic, Underline, Heading1, Heading2, Heading3, List, ListOrdered,
-  ImagePlus, AlignLeft, AlignCenter, AlignRight, LayoutTemplate, Palette, Hash, 
-  Cloud, CloudOff, Highlighter, Type, HelpCircle, Quote
+  Trash2, FileText,
+  BarChart3, BrainCircuit, Maximize2, Clock, Save, Moon, Sun,
+  X, CheckCircle2,
+  AlertCircle, Menu, Download, Lock, Unlock, LogOut, Share2, History,
+  ChevronDown, Bookmark,
+  Edit2, Bold, Italic,
+  Underline, Heading1, Heading2, Heading3, List, ListOrdered,
+  ImagePlus,
+  AlignLeft, AlignCenter, AlignRight, LayoutTemplate, Palette, Hash, 
+  Cloud, CloudOff,
+  Highlighter, Type, HelpCircle, Quote
 } from 'lucide-react';
 
 /**
@@ -48,7 +55,8 @@ const INITIAL_ENTRIES = [
     content: '<p>It is February 2026. The shift towards agentic workflows has completely redefined how we interact with personal data. <span style="background-color: #fef08a;"><b>Epektasis</b> is becoming the core of my digital reflection...</span></p><ul><li>Faster processing</li><li>Deeper insights</li></ul>',
     createdAt: new Date('2026-02-28T10:30:00'),
     tags: ['philosophy', 'tech'],
-    mood: 'serene'
+    mood: 'serene',
+    isBookmarked: true // Bookmarked by default for demonstration
   },
   {
     id: 'e2',
@@ -57,7 +65,8 @@ const INITIAL_ENTRIES = [
     content: '<p>The clarity of a cold morning. Looking back at the start of the year, progress on the semantic search engine has been exponential.</p>',
     createdAt: new Date('2026-02-15T09:15:00'),
     tags: ['work', 'coding'],
-    mood: 'accomplished'
+    mood: 'accomplished',
+    isBookmarked: false
   }
 ];
 
@@ -401,7 +410,7 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
   );
 
   return (
-    <div className="flex flex-col border-2 border-[color:var(--theme-secondary)] rounded-2xl overflow-hidden bg-white shadow-sm mt-2 md:mt-4">
+    <div className="flex flex-col border-2 border-[color:var(--theme-secondary)] rounded-2xl overflow-hidden bg-white shadow-sm mt-4">
       <div className="flex flex-wrap items-center gap-1 p-2 border-b border-[color:var(--theme-secondary)] bg-zinc-50 min-h-[44px]">
         {selectedImage ? (
           <div className="flex items-center gap-2 px-2 animate-in fade-in duration-200 w-full overflow-x-auto pb-1">
@@ -523,7 +532,7 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
             >
               <Mic size={16} />
             </button>
-            <button 
+            <button
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => {
                 restoreSelection();
@@ -550,7 +559,7 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
           setTimeout(() => setSelectedImage(null), 150);
         }}
         onKeyUp={saveSelection}
-        className="p-4 md:p-6 min-h-[500px] md:h-[65vh] md:overflow-y-auto custom-scrollbar outline-none rte-content font-serif text-lg leading-relaxed text-zinc-700 bg-white"
+        className="p-6 min-h-[500px] md:h-[65vh] md:overflow-y-auto custom-scrollbar outline-none rte-content font-serif text-lg leading-relaxed text-zinc-700 bg-white"
         placeholder="Begin your reflection..."
       />
     </div>
@@ -715,33 +724,37 @@ const App = () => {
     return Array.from(tags).sort();
   }, [entries]);
 
-  // BUG FIX: Allow searching ALL entries if activeJournal is null
   const filteredEntries = useMemo(() => {
     return entries.filter(e => {
-      const matchesJournal = activeJournal ? e.journalId === activeJournal.id : true;
+      // If we are explicitly in "Bookmarks" view, only show bookmarked entries
+      if (activeView === 'bookmarks' && !e.isBookmarked) return false;
+
+      // Regular active journal filtering (ignored if viewing bookmarks, archives, or tags without a journal)
+      const matchesJournal = (activeJournal && activeView !== 'bookmarks') ? e.journalId === activeJournal.id : true;
+      
       const lowerQuery = searchQuery.toLowerCase();
       const matchesSearch = e.title.toLowerCase().includes(lowerQuery) || 
-                            e.content.toLowerCase().includes(lowerQuery) ||
-                            (e.tags && e.tags.some(t => t.includes(lowerQuery)));
+                             e.content.toLowerCase().includes(lowerQuery) ||
+                             (e.tags && e.tags.some(t => t.includes(lowerQuery)));
       
       let matchesArchive = true;
-      if (archiveFilter) {
+      if (archiveFilter && activeView !== 'bookmarks') {
         const entryYear = e.createdAt.getFullYear().toString();
         const entryMonth = e.createdAt.toLocaleString('default', { month: 'long' });
         matchesArchive = archiveFilter.month ? (entryYear === archiveFilter.year && entryMonth === archiveFilter.month) : (entryYear === archiveFilter.year);
       }
 
       let matchesTag = true;
-      if (tagFilter) matchesTag = e.tags && e.tags.includes(tagFilter);
+      if (tagFilter && activeView !== 'bookmarks') matchesTag = e.tags && e.tags.includes(tagFilter);
 
       return matchesJournal && matchesSearch && matchesArchive && matchesTag;
     });
-  }, [activeJournal, searchQuery, entries, archiveFilter, tagFilter]);
+  }, [activeJournal, searchQuery, entries, archiveFilter, tagFilter, activeView]);
 
   // --- Handlers ---
 
   const handleCreateEntry = () => {
-    // If viewing 'All Entries', default to the first journal
+    // If viewing 'All Entries' or 'Bookmarks', default to the first journal
     const targetJournalId = activeJournal ? activeJournal.id : (journals[0]?.id || 'j1');
     const newEntry = {
       id: `e-${Date.now()}`,
@@ -750,7 +763,8 @@ const App = () => {
       content: '',
       createdAt: new Date(),
       tags: [],
-      mood: 'neutral'
+      mood: 'neutral',
+      isBookmarked: false
     };
     setEntries([newEntry, ...entries]);
     setSelectedEntryId(newEntry.id);
@@ -758,6 +772,11 @@ const App = () => {
     setArchiveFilter(null);
     setTagFilter(null);
     setShowMobileDetail(true);
+  };
+
+  const toggleBookmark = (id) => {
+    const updated = entries.map(ent => ent.id === id ? { ...ent, isBookmarked: !ent.isBookmarked } : ent);
+    setEntries(updated);
   };
 
   const handleDeleteEntry = async (id) => {
@@ -1190,15 +1209,20 @@ const App = () => {
                         <button
                           key={entry.id}
                           onClick={() => { setSelectedEntryId(entry.id); setActiveJournal(journal || null); setActiveView('entries'); setShowMobileDetail(true); }}
-                          className="p-6 bg-white border border-zinc-200 rounded-3xl text-left hover:border-[color:var(--theme-accent)] hover:shadow-md transition-all group flex flex-col min-h-[160px]"
+                          className="p-6 bg-white border border-zinc-200 rounded-3xl text-left hover:border-[color:var(--theme-accent)] hover:shadow-md transition-all group flex flex-col min-h-[160px] relative"
                         >
+                          {entry.isBookmarked && (
+                            <div className="absolute top-4 right-4 text-[color:var(--theme-primary)]">
+                              <Bookmark size={14} className="fill-current" />
+                            </div>
+                          )}
                           <div className="flex justify-between items-start mb-4">
                             <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest bg-zinc-100 px-2 py-1 rounded">
                               {entry.createdAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                             </span>
                             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: journal?.color || 'var(--theme-primary)' }} />
                           </div>
-                          <h4 className="font-bold text-zinc-900 mb-2 line-clamp-2 group-hover:text-[color:var(--theme-accent)] transition-colors">{entry.title || 'Untitled Entry'}</h4>
+                          <h4 className="font-bold text-zinc-900 mb-2 line-clamp-2 group-hover:text-[color:var(--theme-accent)] transition-colors pr-6">{entry.title || 'Untitled Entry'}</h4>
                           <p className="text-sm text-zinc-500 line-clamp-2 mt-auto">{entry.content ? entry.content.replace(/<[^>]+>/g, '') : 'Empty entry...'}</p>
                         </button>
                       )
@@ -1228,7 +1252,7 @@ const App = () => {
               </button>
             </div>
             <div className="flex flex-col items-center justify-center flex-1 min-h-[400px]">
-              <Calendar size={64} className="text-[color:var(--theme-secondary)] mb-4" />
+              <Calendar size={64} className="text-[#EEE1C6] mb-4" />
               <h2 className="text-2xl font-bold text-zinc-800">{today.toLocaleString('default', { month: 'long', year: 'numeric' })}</h2>
               <p className="text-zinc-500 max-w-sm text-center mt-2">Browse your memories chronologically.</p>
               <div className="mt-8 grid grid-cols-7 gap-2 w-full max-w-md">
@@ -1256,13 +1280,13 @@ const App = () => {
                         }
                       }}
                       className={`aspect-square rounded-lg border flex flex-col items-center justify-center text-xs font-bold transition-all relative
-                        ${isToday ? 'bg-[color:var(--theme-primary)] text-[color:var(--theme-sidebar-text)] ring-4 ring-[color:var(--theme-secondary)]' : 'bg-white text-zinc-700 hover:bg-zinc-50'}
-                        ${hasEntry && !isToday ? 'border-[color:var(--theme-accent)] cursor-pointer' : 'border-zinc-200'}
+                        ${isToday ? 'bg-[#00471B] text-white ring-4 ring-[#EEE1C6]' : 'bg-white text-zinc-700 hover:bg-zinc-50'}
+                        ${hasEntry && !isToday ? 'border-[#0077C0] cursor-pointer' : 'border-zinc-200'}
                         ${!hasEntry && !isToday ? 'cursor-default' : ''}
                       `}
                     >
                       {day}
-                      {hasEntry && !isToday && <div className="w-1.5 h-1.5 rounded-full bg-[color:var(--theme-accent)] absolute bottom-2" />}
+                      {hasEntry && !isToday && <div className="w-1.5 h-1.5 rounded-full bg-[#0077C0] absolute bottom-2" />}
                       {hasEntry && isToday && <div className="w-1.5 h-1.5 rounded-full bg-white absolute bottom-2" />}
                     </button>
                   );
@@ -1287,7 +1311,7 @@ const App = () => {
                 <button onClick={() => handleDeleteTemplate(selectedTemplate.id)} className="p-2 text-zinc-400 hover:bg-red-50 hover:text-red-600 rounded-full transition-all" disabled={!selectedTemplate}><Trash2 size={18} /></button>
               </div>
             </header>
-            <div className="flex-1 overflow-y-auto px-3 md:px-8 pt-6 md:pt-12 pb-32 md:pb-[40vh] flex justify-center custom-scrollbar bg-[#F8F9FA]/30">
+            <div className="flex-1 overflow-y-auto px-8 pt-12 pb-32 md:pb-[40vh] flex justify-center custom-scrollbar bg-[#F8F9FA]/30">
               {selectedTemplate ? (
                 <div className="max-w-3xl w-full space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                   <div className="space-y-4">
@@ -1608,6 +1632,22 @@ const App = () => {
                     <Lock size={14} /><span className="hidden xl:inline">Lock Vault</span>
                   </button>
                 )}
+                
+                {/* BOOKMARK BUTTON */}
+                {selectedEntry && (
+                  <button 
+                    onClick={() => toggleBookmark(selectedEntry.id)}
+                    className={`p-2 rounded-full transition-all flex items-center justify-center ${
+                      selectedEntry.isBookmarked 
+                        ? 'text-[color:var(--theme-primary)] bg-[color:var(--theme-primary)]/10' 
+                        : 'text-zinc-400 hover:bg-zinc-100'
+                    }`}
+                    title={selectedEntry.isBookmarked ? "Remove Bookmark" : "Bookmark Entry"}
+                  >
+                    <Bookmark size={20} className={selectedEntry.isBookmarked ? "fill-current" : ""} />
+                  </button>
+                )}
+
                 <button onClick={() => setShowTemplatePicker(true)} className="flex items-center gap-2 px-3 md:px-4 py-2 bg-zinc-100 text-zinc-700 rounded-full text-xs font-bold hover:bg-zinc-200 transition-all"><LayoutTemplate size={14} /><span className="hidden xl:inline">Templates</span></button>
                 <button onClick={syncToDrive} className={`p-2 rounded-full transition-all ${isSaving ? 'text-green-600 bg-green-50' : 'text-zinc-400 hover:bg-zinc-100'}`}>{isSaving ? <CheckCircle2 size={20} /> : <Save size={20} />}</button>
                 <div className="w-px h-6 bg-zinc-200 mx-1 hidden md:block" />
@@ -1625,7 +1665,7 @@ const App = () => {
               </div>
             </header>
 
-            <div className="flex-1 overflow-y-auto px-3 md:px-8 pt-6 md:pt-12 pb-32 md:pb-[40vh] flex justify-center custom-scrollbar bg-[#F8F9FA]/30">
+            <div className="flex-1 overflow-y-auto px-8 pt-12 pb-32 md:pb-[40vh] flex justify-center custom-scrollbar bg-[#F8F9FA]/30">
               {selectedEntry ? (
                 <div className="max-w-3xl w-full space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                   <div className="space-y-4">
@@ -1712,6 +1752,13 @@ const App = () => {
               <SectionLabel>Core</SectionLabel>
               <SidebarItem icon={Home} label="Home" active={activeView === 'home'} onClick={() => { setActiveView('home'); setArchiveFilter(null); setTagFilter(null); setShowMobileDetail(false); if(window.innerWidth < 768) setSidebarOpen(false); }} />
               <SidebarItem icon={FileText} label="All Entries" active={activeView === 'entries' && !activeJournal && !archiveFilter && !tagFilter} onClick={() => { setActiveView('entries'); setActiveJournal(null); setArchiveFilter(null); setTagFilter(null); setShowMobileDetail(false); if(window.innerWidth < 768) setSidebarOpen(false); }} />
+              <SidebarItem 
+                icon={Bookmark} 
+                label="Bookmarks" 
+                active={activeView === 'bookmarks'} 
+                onClick={() => { setActiveView('bookmarks'); setActiveJournal(null); setArchiveFilter(null); setTagFilter(null); setShowMobileDetail(false); if(window.innerWidth < 768) setSidebarOpen(false); }} 
+                badge={entries.filter(e => e.isBookmarked).length || undefined} 
+              />
               <SidebarItem icon={LayoutTemplate} label="Templates" active={activeView === 'templates'} onClick={() => { setActiveView('templates'); setShowMobileDetail(false); if(window.innerWidth < 768) setSidebarOpen(false); }} />
               <SidebarItem icon={Calendar} label="Calendar" active={activeView === 'calendar'} onClick={() => { setActiveView('calendar'); setShowMobileDetail(true); if(window.innerWidth < 768) setSidebarOpen(false); }} />
               <SidebarItem icon={BarChart3} label="Life Analytics" active={activeView === 'analytics'} onClick={() => { setActiveView('analytics'); setShowMobileDetail(true); if(window.innerWidth < 768) setSidebarOpen(false); }} />
@@ -1766,22 +1813,22 @@ const App = () => {
           </aside>
 
           {/* DYNAMIC LIST PANEL */}
-          {(activeView === 'entries' || activeView === 'templates') && (
+          {(activeView === 'entries' || activeView === 'bookmarks' || activeView === 'templates') && (
             <div className={`w-full md:w-80 border-r ${isDarkMode ? 'border-zinc-800 bg-zinc-950' : 'border-zinc-200 bg-white'} ${showMobileDetail ? 'hidden md:flex' : 'flex'} flex-col shadow-sm z-10 shrink-0`}>
               <div className="p-4 border-b border-zinc-200/50 flex flex-col gap-4">
                 <div className="flex justify-between items-start">
                   <div className="flex-1 min-w-0 pr-2">
-                    {activeView === 'entries' ? (
+                    {(activeView === 'entries' || activeView === 'bookmarks') ? (
                       <>
-                        {isEditingJournalName && activeJournal ? (
+                        {isEditingJournalName && activeJournal && activeView !== 'bookmarks' ? (
                           <input autoFocus value={activeJournal.name || ''} onChange={(e) => { const updated = journals.map(j => j.id === activeJournal.id ? { ...j, name: e.target.value } : j); setJournals(updated); setActiveJournal(updated.find(j => j.id === activeJournal.id)); }} onBlur={() => setIsEditingJournalName(false)} onKeyDown={(e) => e.key === 'Enter' && setIsEditingJournalName(false)} className="font-bold text-xl bg-transparent border-b border-zinc-300 outline-none w-full text-zinc-900" />
                         ) : (
-                          <h2 className={`font-bold text-xl truncate ${activeJournal ? 'cursor-pointer hover:text-[color:var(--theme-accent)] transition-colors flex items-center gap-2 group' : ''}`} onClick={() => activeJournal && setIsEditingJournalName(true)} title={activeJournal ? "Click to rename journal" : "All your entries"}>
-                            {activeJournal?.name || 'All Entries'} 
-                            {activeJournal && <Edit2 size={12} className="opacity-0 group-hover:opacity-100 text-zinc-400" />}
+                          <h2 className={`font-bold text-xl truncate ${(activeJournal && activeView !== 'bookmarks') ? 'cursor-pointer hover:text-[color:var(--theme-accent)] transition-colors flex items-center gap-2 group' : ''}`} onClick={() => activeJournal && activeView !== 'bookmarks' && setIsEditingJournalName(true)} title={(activeJournal && activeView !== 'bookmarks') ? "Click to rename journal" : "Your entries"}>
+                            {activeView === 'bookmarks' ? 'Bookmarks' : (activeJournal?.name || 'All Entries')} 
+                            {activeJournal && activeView !== 'bookmarks' && <Edit2 size={12} className="opacity-0 group-hover:opacity-100 text-zinc-400" />}
                           </h2>
                         )}
-                        {(archiveFilter || tagFilter) && (
+                        {(archiveFilter || tagFilter) && activeView !== 'bookmarks' && (
                           <span className="text-[10px] text-[color:var(--theme-accent)] font-bold uppercase tracking-widest mt-0.5 flex items-center gap-1.5 flex-wrap">
                             {archiveFilter && <span className="flex items-center gap-1"><Archive size={10} /> {archiveFilter.month ? `${archiveFilter.month} ` : ''}{archiveFilter.year}</span>}
                             {archiveFilter && tagFilter && <span className="text-zinc-300">•</span>}
@@ -1793,13 +1840,13 @@ const App = () => {
                   </div>
                   <div className="flex items-center gap-0.5 shrink-0">
                     <button onClick={() => { setActiveView('home'); setArchiveFilter(null); setTagFilter(null); setShowMobileDetail(false); }} className="p-1.5 hover:bg-zinc-100 rounded-md transition-colors text-zinc-400 hover:text-zinc-900" title="Go Home"><Home size={16} /></button>
-                    {activeView === 'entries' && <button onClick={() => handleExportPDF(filteredEntries, archiveFilter ? `Archive: ${archiveFilter.month || ''} ${archiveFilter.year}` : activeJournal ? `Journal: ${activeJournal.name}` : 'All Entries')} className="p-1.5 hover:bg-zinc-100 rounded-md transition-colors text-zinc-400 hover:text-zinc-900" title="Export List to PDF"><Download size={16} /></button>}
+                    {(activeView === 'entries' || activeView === 'bookmarks') && <button onClick={() => handleExportPDF(filteredEntries, activeView === 'bookmarks' ? 'Bookmarked Entries' : (archiveFilter ? `Archive: ${archiveFilter.month || ''} ${archiveFilter.year}` : activeJournal ? `Journal: ${activeJournal.name}` : 'All Entries'))} className="p-1.5 hover:bg-zinc-100 rounded-md transition-colors text-zinc-400 hover:text-zinc-900" title="Export List to PDF"><Download size={16} /></button>}
                     {activeView === 'entries' && !archiveFilter && !tagFilter && activeJournal && <button onClick={() => handleDeleteJournal(activeJournal.id)} className="p-1.5 hover:bg-red-50 rounded-md transition-colors text-zinc-400 hover:text-red-600" title="Delete Journal"><Trash2 size={16} /></button>}
                     <button onClick={() => setSidebarOpen(!isSidebarOpen)} className="p-1.5 hover:bg-zinc-100 rounded-md transition-colors text-zinc-400 hover:text-zinc-900" title="Toggle Sidebar"><Menu size={18} /></button>
                   </div>
                 </div>
                 
-                {activeView === 'entries' && (
+                {(activeView === 'entries' || activeView === 'bookmarks') && (
                   <div className="relative mt-1">
                     <Search className="absolute left-3 top-2.5 text-zinc-400" size={16} />
                     <input type="text" placeholder="Search tags or text..." className={`w-full pl-10 pr-4 py-2 text-sm rounded-full ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-zinc-100 border-transparent'} focus-ring-accent outline-none transition-all`} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
@@ -1807,42 +1854,85 @@ const App = () => {
                 )}
               </div>
 
-              <div className="flex-1 overflow-y-auto space-y-px custom-scrollbar">
-                {activeView === 'entries' && (filteredEntries.length > 0 ? (
+              <div className={`flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar ${isDarkMode ? 'bg-zinc-950' : 'bg-zinc-50/80'}`}>
+                {(activeView === 'entries' || activeView === 'bookmarks') && (filteredEntries.length > 0 ? (
                   filteredEntries.map(entry => {
                     const entryMoodObj = MOODS.find(m => m.id === entry.mood) || MOODS.find(m => m.id === 'neutral');
                     const EntryMoodIcon = entryMoodObj.icon;
+                    const isSelected = selectedEntryId === entry.id;
+                    const day = entry.createdAt.getDate();
+                    const month = entry.createdAt.toLocaleString('en-US', { month: 'short' }).toUpperCase();
+                    
                     return (
-                      <button key={entry.id} onClick={() => { setSelectedEntryId(entry.id); setShowMobileDetail(true); }} className={`w-full text-left p-5 transition-all relative border-b border-zinc-100 ${selectedEntryId === entry.id ? (isDarkMode ? 'bg-primary-20 shadow-inner' : 'bg-secondary-30 shadow-sm') : 'hover:bg-zinc-50'}`}>
-                        {selectedEntryId === entry.id && <div className="absolute left-0 top-0 bottom-0 w-1 bg-[color:var(--theme-primary)]" />}
-                        <div className="flex justify-between items-start mb-1"><span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{entry.createdAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span><EntryMoodIcon size={14} className={entryMoodObj.color} /></div>
-                        <h3 className={`font-bold text-sm mb-1 leading-tight ${selectedEntryId === entry.id ? 'text-[color:var(--theme-primary)]' : 'text-zinc-800'}`}>{entry.title || 'Untitled Entry'}</h3>
-                        <p className="text-xs text-zinc-500 line-clamp-2 leading-relaxed">{entry.content ? entry.content.replace(/<[^>]+>/g, '').substring(0, 100) : 'Empty entry...'}</p>
-                        {entry.tags && entry.tags.length > 0 && (
-                          <div className="flex gap-1.5 mt-2.5 overflow-hidden flex-wrap">
-                            {entry.tags.slice(0, 3).map(tag => ( <span key={tag} className="text-[9px] font-bold px-1.5 py-0.5 rounded text-[color:var(--theme-primary)] bg-[color:var(--theme-primary)]/10 truncate max-w-[80px]">#{tag}</span> ))}
-                            {entry.tags.length > 3 && <span className="text-[9px] font-bold text-zinc-400 py-0.5">+{entry.tags.length - 3}</span>}
-                          </div>
+                      <button 
+                        key={entry.id} 
+                        onClick={() => { setSelectedEntryId(entry.id); setShowMobileDetail(true); }} 
+                        className={`w-full text-left p-4 rounded-3xl transition-all relative overflow-hidden border shadow-sm ${
+                          isSelected 
+                            ? `border-[color:var(--theme-primary)] ring-1 ring-[color:var(--theme-primary)] ${isDarkMode ? 'bg-zinc-900' : 'bg-white'}`
+                            : `border-zinc-200/70 hover:border-zinc-300 hover:shadow-md ${isDarkMode ? 'bg-zinc-900/50' : 'bg-white'}`
+                        }`}
+                      >
+                        {entry.isBookmarked && (
+                           <div className="absolute top-4 right-4 text-[color:var(--theme-primary)]">
+                             <Bookmark size={14} className="fill-current" />
+                           </div>
                         )}
+                        <div className="flex gap-4">
+                          {/* Date as Art */}
+                          <div className="flex flex-col items-center justify-start pt-1 min-w-[2.5rem]">
+                            <span className={`font-serif text-3xl font-extrabold leading-none ${isSelected ? 'text-[color:var(--theme-primary)]' : 'text-zinc-800'}`}>{day}</span>
+                            <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-1">{month}</span>
+                          </div>
+                          
+                          {/* Content Block */}
+                          <div className="flex-1 min-w-0 pr-4">
+                            <div className="flex items-center gap-2 mb-1.5">
+                              <h3 className={`font-bold text-base leading-tight truncate ${isSelected ? 'text-[color:var(--theme-primary)]' : 'text-zinc-800'}`}>{entry.title || 'Untitled Entry'}</h3>
+                              <EntryMoodIcon size={14} className={`shrink-0 ${entryMoodObj.color}`} />
+                            </div>
+                            <p className="text-xs text-zinc-500 line-clamp-2 leading-relaxed">{entry.content ? entry.content.replace(/<[^>]+>/g, '').substring(0, 100) : 'Empty entry...'}</p>
+                            {entry.tags && entry.tags.length > 0 && (
+                              <div className="flex gap-1.5 mt-3 overflow-hidden flex-wrap">
+                                {entry.tags.slice(0, 3).map(tag => ( <span key={tag} className="text-[10px] font-bold px-2 py-0.5 rounded-full text-[color:var(--theme-primary)] bg-[color:var(--theme-primary)]/10 truncate max-w-[80px]">#{tag}</span> ))}
+                                {entry.tags.length > 3 && <span className="text-[10px] font-bold text-zinc-400 py-0.5">+{entry.tags.length - 3}</span>}
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </button>
                     );
                   })
-                ) : ( <div className="p-8 text-center text-zinc-400 italic text-sm">No entries found.</div> ))}
+                ) : ( <div className="p-8 text-center text-zinc-400 italic text-sm bg-white rounded-3xl border border-dashed border-zinc-200">No entries found.</div> ))}
 
                 {activeView === 'templates' && (templates.length > 0 ? (
-                  templates.map(template => (
-                    <button key={template.id} onClick={() => { setSelectedTemplateId(template.id); setShowMobileDetail(true); }} className={`w-full text-left p-5 transition-all relative border-b border-zinc-100 ${selectedTemplateId === template.id ? (isDarkMode ? 'bg-primary-20 shadow-inner' : 'bg-secondary-30 shadow-sm') : 'hover:bg-zinc-50'}`}>
-                      {selectedTemplateId === template.id && <div className="absolute left-0 top-0 bottom-0 w-1 bg-[color:var(--theme-primary)]" />}
-                      <div className="flex justify-between items-start mb-1"><LayoutTemplate size={14} className={selectedTemplateId === template.id ? 'text-[color:var(--theme-primary)]' : 'text-zinc-400'} /></div>
-                      <h3 className={`font-bold text-sm mb-1 leading-tight ${selectedTemplateId === template.id ? 'text-[color:var(--theme-primary)]' : 'text-zinc-800'}`}>{template.name || 'Untitled Template'}</h3>
-                      <p className="text-xs text-zinc-500 line-clamp-2 leading-relaxed">{template.content ? template.content.replace(/<[^>]+>/g, '').substring(0, 100) : 'Empty template...'}</p>
-                    </button>
-                  ))
-                ) : ( <div className="p-8 text-center text-zinc-400 italic text-sm">No templates saved.</div> ))}
+                  templates.map(template => {
+                    const isSelected = selectedTemplateId === template.id;
+                    return (
+                      <button 
+                        key={template.id} 
+                        onClick={() => { setSelectedTemplateId(template.id); setShowMobileDetail(true); }} 
+                        className={`w-full text-left p-4 rounded-3xl transition-all relative overflow-hidden border shadow-sm flex gap-4 ${
+                          isSelected 
+                            ? `border-[color:var(--theme-primary)] ring-1 ring-[color:var(--theme-primary)] ${isDarkMode ? 'bg-zinc-900' : 'bg-white'}`
+                            : `border-zinc-200/70 hover:border-zinc-300 hover:shadow-md ${isDarkMode ? 'bg-zinc-900/50' : 'bg-white'}`
+                        }`}
+                      >
+                        <div className="flex flex-col items-center justify-start pt-1 min-w-[2.5rem]">
+                          <LayoutTemplate size={20} className={isSelected ? 'text-[color:var(--theme-primary)]' : 'text-zinc-400'} />
+                        </div>
+                        <div className="flex-1 min-w-0 pr-2">
+                          <h3 className={`font-bold text-base mb-1.5 leading-tight ${isSelected ? 'text-[color:var(--theme-primary)]' : 'text-zinc-800'}`}>{template.name || 'Untitled Template'}</h3>
+                          <p className="text-xs text-zinc-500 line-clamp-2 leading-relaxed">{template.content ? template.content.replace(/<[^>]+>/g, '').substring(0, 100) : 'Empty template...'}</p>
+                        </div>
+                      </button>
+                    )
+                  })
+                ) : ( <div className="p-8 text-center text-zinc-400 italic text-sm bg-white rounded-3xl border border-dashed border-zinc-200">No templates saved.</div> ))}
 
-                <button onClick={activeView === 'entries' ? handleCreateEntry : handleCreateTemplate} className="w-full py-8 text-sm text-zinc-400 font-medium hover:text-[color:var(--theme-primary)] flex flex-col items-center gap-2 transition-colors">
-                  <div className="p-2 border-2 border-dashed border-zinc-200 rounded-full"><Plus size={20} /></div>
-                  {activeView === 'entries' ? 'New Entry' : 'New Template'}
+                <button onClick={activeView === 'entries' ? handleCreateEntry : handleCreateTemplate} className="w-full py-6 text-sm text-zinc-400 font-medium hover:text-[color:var(--theme-primary)] flex flex-col items-center gap-2 transition-colors rounded-3xl border-2 border-dashed border-zinc-200 hover:border-[color:var(--theme-primary)] hover:bg-[color:var(--theme-primary)]/5 mt-4">
+                  <div className="p-2"><Plus size={20} /></div>
+                  {(activeView === 'entries' || activeView === 'bookmarks') ? 'New Entry' : 'New Template'}
                 </button>
               </div>
             </div>
