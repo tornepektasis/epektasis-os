@@ -629,6 +629,13 @@ const App = () => {
     return saved ? { ...DEFAULT_THEME, ...JSON.parse(saved) } : DEFAULT_THEME;
   });
 
+  const [customThemes, setCustomThemes] = useState(() => {
+    const saved = localStorage.getItem('epektasis_custom_themes');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [activeThemeId, setActiveThemeId] = useState(() => localStorage.getItem('epektasis_active_theme') || 'default');
+
   // Security State
   const [userPin, setUserPin] = useState(() => localStorage.getItem('epektasis_pin') || '');
   const [isLocked, setIsLocked] = useState(() => !!localStorage.getItem('epektasis_pin'));
@@ -709,6 +716,8 @@ const App = () => {
   useEffect(() => { localStorage.setItem('epektasis_journals', JSON.stringify(journals)); }, [journals]);
   useEffect(() => { localStorage.setItem('epektasis_templates', JSON.stringify(templates)); }, [templates]);
   useEffect(() => { localStorage.setItem('epektasis_theme', JSON.stringify(themeConfig)); }, [themeConfig]);
+  useEffect(() => { localStorage.setItem('epektasis_custom_themes', JSON.stringify(customThemes)); }, [customThemes]);
+  useEffect(() => { localStorage.setItem('epektasis_active_theme', activeThemeId); }, [activeThemeId]);
   useEffect(() => { localStorage.setItem('epektasis_theme_mode', themeMode); }, [themeMode]);
   useEffect(() => { localStorage.setItem('epektasis_gclient', googleClientId); }, [googleClientId]);
   useEffect(() => { if (driveFileId) localStorage.setItem('epektasis_fileId', driveFileId); }, [driveFileId]);
@@ -723,7 +732,7 @@ const App = () => {
       }, 3000);
     }
     return () => { if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current); };
-  }, [entries, journals, templates, themeConfig, isDriveConnected, driveFileId, accessToken, isLocked]);
+  }, [entries, journals, templates, themeConfig, customThemes, activeThemeId, isDriveConnected, driveFileId, accessToken, isLocked]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -988,7 +997,7 @@ const App = () => {
         await pullFromDrive(fileId, token);
       } else {
         const metadata = { name: 'epektasis_vault.json', mimeType: 'application/json', parents: [folderId] };
-        const data = JSON.stringify({ entries, journals, templates, themeConfig });
+        const data = JSON.stringify({ entries, journals, templates, themeConfig, customThemes, activeThemeId });
         
         const file = new Blob([data], { type: 'application/json' });
         const form = new FormData();
@@ -1031,6 +1040,8 @@ const App = () => {
       if (data.journals) setJournals(data.journals);
       if (data.templates) setTemplates(data.templates);
       if (data.themeConfig) setThemeConfig(data.themeConfig);
+      if (data.customThemes) setCustomThemes(data.customThemes);
+      if (data.activeThemeId) setActiveThemeId(data.activeThemeId);
       
       setLastSynced(new Date().toLocaleTimeString());
       setModalConfig({ type: 'alert', title: 'Data Downloaded', message: 'Successfully pulled your Epektasis vault from Google Drive!', confirmText: 'Okay' });
@@ -1043,7 +1054,7 @@ const App = () => {
     setIsSaving(true);
     if (isDriveConnected && driveFileId && accessToken) {
       try {
-        const data = JSON.stringify({ entries, journals, templates, themeConfig });
+        const data = JSON.stringify({ entries, journals, templates, themeConfig, customThemes, activeThemeId });
         const file = new Blob([data], { type: 'application/json' });
         
         await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`, {
@@ -1057,6 +1068,40 @@ const App = () => {
       }
     }
     setTimeout(() => setIsSaving(false), 800);
+  };
+
+  const handleSaveCustomThemePrompt = () => {
+    setModalConfig({
+      title: 'Save Custom Theme',
+      message: 'Give your current color palette a name to save it for later.',
+      type: 'confirm',
+      confirmText: 'Save Theme',
+      content: (
+        <div className="mt-4">
+          <input 
+            type="text" 
+            id="customThemeNameInput" 
+            placeholder="e.g., Midnight Forest" 
+            className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 outline-none focus-ring-accent text-base bg-zinc-50 focus:bg-white"
+            autoFocus
+          />
+        </div>
+      ),
+      onConfirm: () => {
+        const input = document.getElementById('customThemeNameInput');
+        const themeName = input?.value?.trim();
+        if (themeName) {
+          const newThemeId = `theme-${Date.now()}`;
+          const newTheme = {
+            id: newThemeId,
+            name: themeName,
+            ...themeConfig
+          };
+          setCustomThemes(prev => [...prev, newTheme]);
+          setActiveThemeId(newThemeId);
+        }
+      }
+    });
   };
 
   const handleFullSignOut = () => {
@@ -1150,7 +1195,8 @@ const App = () => {
   };
 
   const uiFontStack = themeConfig.uiFont === 'system-ui' ? 'system-ui, sans-serif' : `'${themeConfig.uiFont}', sans-serif`;
-  const docFontStack = themeConfig.docFont === 'system-ui' ? 'system-ui, serif' : `'${themeConfig.docFont}', serif`;
+  const isDocSans = ['Inter', 'Roboto', 'Open Sans', 'Lato', 'Nunito', 'Montserrat', 'Quicksand'].includes(themeConfig.docFont);
+  const docFontStack = themeConfig.docFont === 'system-ui' ? 'system-ui, serif' : `'${themeConfig.docFont}', ${isDocSans ? 'sans-serif' : 'serif'}`;
 
   // Updated Dynamic CSS to implement reading width and clean up typography
   const dynamicCss = `
@@ -1556,36 +1602,100 @@ const App = () => {
                 <section className="p-6 border border-zinc-100 shadow-sm rounded-3xl bg-white">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 border-b border-zinc-100 pb-4 gap-4">
                     <div className="flex items-center gap-2"><Palette size={20} className="text-[color:var(--theme-primary)]" /><h3 className="font-heading font-bold text-lg text-zinc-900">App Theming</h3></div>
-                    <button onClick={() => setThemeConfig(DEFAULT_THEME)} className="text-xs font-bold text-zinc-500 hover:text-zinc-900 px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors self-start sm:self-auto shrink-0">Restore Defaults</button>
+                    
+                    <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+                      <select 
+                        value={activeThemeId}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setActiveThemeId(val);
+                          if (val === 'default') {
+                            setThemeConfig({ ...themeConfig, ...DEFAULT_THEME });
+                          } else if (val !== 'custom') {
+                            const theme = customThemes.find(t => t.id === val);
+                            if (theme) {
+                              setThemeConfig({ ...themeConfig, ...theme });
+                            }
+                          }
+                        }}
+                        className="text-xs font-bold text-zinc-700 bg-zinc-100 hover:bg-zinc-200 border border-transparent px-2 py-1.5 rounded-lg outline-none cursor-pointer focus:border-zinc-300 max-w-[140px] truncate transition-colors"
+                      >
+                        {activeThemeId === 'custom' && <option value="custom" disabled>Unsaved Changes...</option>}
+                        <option value="default">Epektasis Default</option>
+                        {customThemes.length > 0 && (
+                          <optgroup label="Your Themes">
+                            {customThemes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                          </optgroup>
+                        )}
+                      </select>
+                      
+                      <button 
+                        onClick={handleSaveCustomThemePrompt} 
+                        className="text-xs font-bold text-[color:var(--theme-primary)] hover:text-[color:var(--theme-secondary)] px-3 py-1.5 bg-[color:var(--theme-primary)]/10 hover:bg-[color:var(--theme-primary)] rounded-lg transition-colors shrink-0"
+                      >
+                        Save Colors
+                      </button>
+
+                      {activeThemeId.startsWith('theme-') && (
+                        <button 
+                          onClick={() => {
+                            setModalConfig({
+                              title: 'Delete Theme',
+                              message: 'Are you sure you want to permanently delete this theme?',
+                              type: 'confirm',
+                              isDestructive: true,
+                              confirmText: 'Delete',
+                              onConfirm: () => {
+                                setCustomThemes(customThemes.filter(t => t.id !== activeThemeId));
+                                setActiveThemeId('default');
+                                setThemeConfig({ ...themeConfig, ...DEFAULT_THEME });
+                              }
+                            });
+                          }} 
+                          className="text-xs font-bold text-red-600 hover:text-red-700 px-3 py-1.5 bg-red-50 hover:bg-red-100 rounded-lg transition-colors shrink-0"
+                          title="Delete Custom Theme"
+                        >
+                          Delete Theme
+                        </button>
+                      )}
+
+                      <button 
+                        onClick={() => { setThemeConfig({ ...themeConfig, ...DEFAULT_THEME }); setActiveThemeId('default'); }} 
+                        className="text-xs font-bold text-zinc-500 hover:text-zinc-900 px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors shrink-0"
+                        title="Restore to Default Theme"
+                      >
+                        Reset
+                      </button>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <div>
                       <label className="block text-sm font-bold text-zinc-700 mb-2">Primary Color</label>
                       <div className="flex items-center gap-3">
-                        <input type="color" value={themeConfig.primary} onChange={e => setThemeConfig({...themeConfig, primary: e.target.value})} className="w-10 h-10 rounded cursor-pointer border-0 bg-transparent p-0 shrink-0" />
-                        <input type="text" value={themeConfig.primary} onChange={e => setThemeConfig({...themeConfig, primary: e.target.value})} className="flex-1 px-3 py-2 text-base rounded-xl border border-zinc-200 bg-zinc-50 focus:bg-white uppercase focus-ring-accent min-w-0" />
+                        <input type="color" value={themeConfig.primary} onChange={e => { setThemeConfig({...themeConfig, primary: e.target.value}); setActiveThemeId('custom'); }} className="w-10 h-10 rounded cursor-pointer border-0 bg-transparent p-0 shrink-0" />
+                        <input type="text" value={themeConfig.primary} onChange={e => { setThemeConfig({...themeConfig, primary: e.target.value}); setActiveThemeId('custom'); }} className="flex-1 px-3 py-2 text-base rounded-xl border border-zinc-200 bg-zinc-50 focus:bg-white uppercase focus-ring-accent min-w-0" />
                       </div>
                     </div>
                     <div>
                       <label className="block text-sm font-bold text-zinc-700 mb-2">Secondary Color</label>
                       <div className="flex items-center gap-3">
-                        <input type="color" value={themeConfig.secondary} onChange={e => setThemeConfig({...themeConfig, secondary: e.target.value})} className="w-10 h-10 rounded cursor-pointer border-0 bg-transparent p-0 shrink-0" />
-                        <input type="text" value={themeConfig.secondary} onChange={e => setThemeConfig({...themeConfig, secondary: e.target.value})} className="flex-1 px-3 py-2 text-base rounded-xl border border-zinc-200 bg-zinc-50 focus:bg-white uppercase focus-ring-accent min-w-0" />
+                        <input type="color" value={themeConfig.secondary} onChange={e => { setThemeConfig({...themeConfig, secondary: e.target.value}); setActiveThemeId('custom'); }} className="w-10 h-10 rounded cursor-pointer border-0 bg-transparent p-0 shrink-0" />
+                        <input type="text" value={themeConfig.secondary} onChange={e => { setThemeConfig({...themeConfig, secondary: e.target.value}); setActiveThemeId('custom'); }} className="flex-1 px-3 py-2 text-base rounded-xl border border-zinc-200 bg-zinc-50 focus:bg-white uppercase focus-ring-accent min-w-0" />
                       </div>
                     </div>
                     <div>
                       <label className="block text-sm font-bold text-zinc-700 mb-2">Accent Color</label>
                       <div className="flex items-center gap-3">
-                        <input type="color" value={themeConfig.accent} onChange={e => setThemeConfig({...themeConfig, accent: e.target.value})} className="w-10 h-10 rounded cursor-pointer border-0 bg-transparent p-0 shrink-0" />
-                        <input type="text" value={themeConfig.accent} onChange={e => setThemeConfig({...themeConfig, accent: e.target.value})} className="flex-1 px-3 py-2 text-base rounded-xl border border-zinc-200 bg-zinc-50 focus:bg-white uppercase focus-ring-accent min-w-0" />
+                        <input type="color" value={themeConfig.accent} onChange={e => { setThemeConfig({...themeConfig, accent: e.target.value}); setActiveThemeId('custom'); }} className="w-10 h-10 rounded cursor-pointer border-0 bg-transparent p-0 shrink-0" />
+                        <input type="text" value={themeConfig.accent} onChange={e => { setThemeConfig({...themeConfig, accent: e.target.value}); setActiveThemeId('custom'); }} className="flex-1 px-3 py-2 text-base rounded-xl border border-zinc-200 bg-zinc-50 focus:bg-white uppercase focus-ring-accent min-w-0" />
                       </div>
                     </div>
                     <div>
                       <label className="block text-sm font-bold text-zinc-700 mb-2">Sidebar Text</label>
                       <div className="flex items-center gap-3">
-                        <input type="color" value={themeConfig.sidebarText} onChange={e => setThemeConfig({...themeConfig, sidebarText: e.target.value})} className="w-10 h-10 rounded cursor-pointer border-0 bg-transparent p-0 shrink-0" />
-                        <input type="text" value={themeConfig.sidebarText} onChange={e => setThemeConfig({...themeConfig, sidebarText: e.target.value})} className="flex-1 px-3 py-2 text-base rounded-xl border border-zinc-200 bg-zinc-50 focus:bg-white uppercase focus-ring-accent min-w-0" />
+                        <input type="color" value={themeConfig.sidebarText} onChange={e => { setThemeConfig({...themeConfig, sidebarText: e.target.value}); setActiveThemeId('custom'); }} className="w-10 h-10 rounded cursor-pointer border-0 bg-transparent p-0 shrink-0" />
+                        <input type="text" value={themeConfig.sidebarText} onChange={e => { setThemeConfig({...themeConfig, sidebarText: e.target.value}); setActiveThemeId('custom'); }} className="flex-1 px-3 py-2 text-base rounded-xl border border-zinc-200 bg-zinc-50 focus:bg-white uppercase focus-ring-accent min-w-0" />
                       </div>
                     </div>
                   </div>
@@ -1593,14 +1703,45 @@ const App = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-zinc-100 mb-6">
                     <div>
                       <label className="block text-sm font-bold text-zinc-700 mb-2">UI Font (Interface)</label>
-                      <select value={themeConfig.uiFont} onChange={e => setThemeConfig({...themeConfig, uiFont: e.target.value})} className="w-full px-3 py-2 text-base rounded-xl border border-zinc-200 bg-zinc-50 focus:bg-white focus-ring-accent outline-none">
-                        <option value="Inter">Inter</option><option value="Roboto">Roboto</option><option value="Open Sans">Open Sans</option><option value="system-ui">System Default</option>
+                      <select value={themeConfig.uiFont} onChange={e => { setThemeConfig({...themeConfig, uiFont: e.target.value}); setActiveThemeId('custom'); }} className="w-full px-3 py-2 text-base rounded-xl border border-zinc-200 bg-zinc-50 focus:bg-white focus-ring-accent outline-none">
+                        <option value="Inter">Inter</option>
+                        <option value="Roboto">Roboto</option>
+                        <option value="Open Sans">Open Sans</option>
+                        <option value="Lato">Lato</option>
+                        <option value="Poppins">Poppins</option>
+                        <option value="Montserrat">Montserrat</option>
+                        <option value="Nunito">Nunito</option>
+                        <option value="Fira Sans">Fira Sans</option>
+                        <option value="Work Sans">Work Sans</option>
+                        <option value="DM Sans">DM Sans</option>
+                        <option value="Rubik">Rubik</option>
+                        <option value="system-ui">System Default</option>
                       </select>
                     </div>
                     <div>
                       <label className="block text-sm font-bold text-zinc-700 mb-2">Document Font (Editor)</label>
-                      <select value={themeConfig.docFont} onChange={e => setThemeConfig({...themeConfig, docFont: e.target.value})} className="w-full px-3 py-2 text-base rounded-xl border border-zinc-200 bg-zinc-50 focus:bg-white focus-ring-accent outline-none">
-                        <option value="Charter">Charter</option><option value="Merriweather">Merriweather</option><option value="Lora">Lora</option><option value="Georgia">Georgia</option>
+                      <select value={themeConfig.docFont} onChange={e => { setThemeConfig({...themeConfig, docFont: e.target.value}); setActiveThemeId('custom'); }} className="w-full px-3 py-2 text-base rounded-xl border border-zinc-200 bg-zinc-50 focus:bg-white focus-ring-accent outline-none">
+                        <optgroup label="Serif">
+                          <option value="Charter">Charter</option>
+                          <option value="Merriweather">Merriweather</option>
+                          <option value="Lora">Lora</option>
+                          <option value="Playfair Display">Playfair Display</option>
+                          <option value="PT Serif">PT Serif</option>
+                          <option value="Crimson Text">Crimson Text</option>
+                          <option value="Spectral">Spectral</option>
+                          <option value="EB Garamond">EB Garamond</option>
+                          <option value="Literata">Literata</option>
+                          <option value="Georgia">Georgia</option>
+                        </optgroup>
+                        <optgroup label="Sans-Serif">
+                          <option value="Inter">Inter</option>
+                          <option value="Roboto">Roboto</option>
+                          <option value="Open Sans">Open Sans</option>
+                          <option value="Lato">Lato</option>
+                          <option value="Nunito">Nunito</option>
+                          <option value="Montserrat">Montserrat</option>
+                          <option value="Quicksand">Quicksand</option>
+                        </optgroup>
                       </select>
                     </div>
                   </div>
