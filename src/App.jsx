@@ -35,9 +35,9 @@ const MOODS = [
 
 // --- Initial Data ---
 const INITIAL_JOURNALS = [
-  { id: 'j1', name: 'Personal', color: 'var(--theme-primary)' },
-  { id: 'j2', name: 'Spiritual', color: 'var(--theme-accent)' },
-  { id: 'j3', name: 'Commonplace', color: '#6B4E71' },
+  { id: 'j1', name: 'Personal', color: 'var(--theme-primary)', defaultTemplateId: null, autoFillTemplate: false },
+  { id: 'j2', name: 'Spiritual', color: 'var(--theme-accent)', defaultTemplateId: null, autoFillTemplate: false },
+  { id: 'j3', name: 'Commonplace', color: '#6B4E71', defaultTemplateId: null, autoFillTemplate: false },
 ];
 
 const INITIAL_ENTRIES = [
@@ -798,11 +798,21 @@ const App = () => {
 
   const handleCreateEntry = () => {
     const targetJournalId = activeJournal ? activeJournal.id : (journals[0]?.id || 'j1');
+    const targetJournal = journals.find(j => j.id === targetJournalId);
+
+    let initialContent = '';
+    if (targetJournal?.autoFillTemplate && targetJournal?.defaultTemplateId) {
+      const template = templates.find(t => t.id === targetJournal.defaultTemplateId);
+      if (template) {
+        initialContent = template.content;
+      }
+    }
+
     const newEntry = {
       id: `e-${Date.now()}`,
       journalIds: [targetJournalId],
       title: '',
-      content: '',
+      content: initialContent,
       createdAt: new Date(),
       tags: [],
       mood: 'neutral',
@@ -879,7 +889,7 @@ const App = () => {
   };
 
   const handleAddJournal = () => {
-    const newJournal = { id: `j-${Date.now()}`, name: 'New Journal', color: 'var(--theme-accent)' };
+    const newJournal = { id: `j-${Date.now()}`, name: 'New Journal', color: 'var(--theme-accent)', defaultTemplateId: null, autoFillTemplate: false };
     setJournals([...journals, newJournal]);
     setActiveJournal(newJournal);
     setActiveView('entries');
@@ -1595,6 +1605,65 @@ const App = () => {
                     >
                       <LogOut size={16} /> Sign Out
                     </button>
+                  </div>
+                </section>
+
+                {/* JOURNALS & TEMPLATES */}
+                <section className="p-6 border border-zinc-100 shadow-sm rounded-3xl bg-white">
+                  <div className="flex items-center gap-3 mb-6 border-b border-zinc-100 pb-4">
+                    <div className="p-2 bg-[color:var(--theme-primary)]/10 text-[color:var(--theme-primary)] rounded-xl"><Book size={20} /></div>
+                    <div>
+                      <h3 className="font-heading font-bold text-lg text-zinc-900">Journal Management</h3>
+                      <p className="text-sm text-zinc-500 font-medium">Assign default templates and toggle auto-fill behaviors.</p>
+                    </div>
+                  </div>
+                  <div className="space-y-4 mb-2">
+                    {journals.map(journal => (
+                      <div key={journal.id} className="p-4 border border-zinc-100 rounded-2xl bg-zinc-50 flex flex-col xl:flex-row xl:items-center justify-between gap-4 transition-all hover:border-zinc-200 shadow-sm">
+                        <div className="flex items-center gap-3">
+                          <input type="color" value={journal.color} onChange={e => { const updated = journals.map(j => j.id === journal.id ? { ...j, color: e.target.value } : j); setJournals(updated); }} className="w-8 h-8 rounded-full cursor-pointer border-[3px] border-white shadow-sm p-0 shrink-0" title="Change Journal Color" />
+                          <input
+                            type="text"
+                            value={journal.name}
+                            onChange={(e) => { const updated = journals.map(j => j.id === journal.id ? { ...j, name: e.target.value } : j); setJournals(updated); }}
+                            className="font-bold text-zinc-800 bg-transparent outline-none border-b border-transparent focus:border-zinc-300 transition-colors w-full max-w-[200px]"
+                          />
+                        </div>
+                        <div className="flex flex-row items-center gap-4 justify-between xl:justify-end border-t border-zinc-200/50 xl:border-t-0 pt-4 xl:pt-0">
+                          <select
+                            value={journal.defaultTemplateId || ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              const updated = journals.map(j => j.id === journal.id ? { ...j, defaultTemplateId: val || null } : j);
+                              setJournals(updated);
+                            }}
+                            className="text-sm font-medium border border-zinc-200 rounded-xl px-3 py-2 outline-none bg-white text-zinc-700 max-w-[160px] truncate shadow-sm hover:border-zinc-300 transition-colors focus:border-[color:var(--theme-accent)]"
+                          >
+                            <option value="">No Template</option>
+                            {templates.map(t => (
+                              <option key={t.id} value={t.id}>{t.name}</option>
+                            ))}
+                          </select>
+
+                          <div className="flex items-center gap-3 shrink-0 bg-white px-3 py-2 rounded-xl border border-zinc-200 shadow-sm" title="Auto-fill this template when creating a new entry in this journal">
+                            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Auto-fill</span>
+                            <button
+                              onClick={() => {
+                                if (!journal.defaultTemplateId) {
+                                  setModalConfig({ type: 'alert', title: 'Template Required', message: 'Please select a default template from the dropdown before enabling auto-fill.', confirmText: 'Okay' });
+                                  return;
+                                }
+                                const updated = journals.map(j => j.id === journal.id ? { ...j, autoFillTemplate: !j.autoFillTemplate } : j);
+                                setJournals(updated);
+                              }}
+                              className={`relative w-10 h-6 rounded-full transition-colors ${journal.autoFillTemplate ? 'bg-[color:var(--theme-primary)]' : 'bg-zinc-200 hover:bg-zinc-300'}`}
+                            >
+                              <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all shadow-sm ${journal.autoFillTemplate ? 'left-[22px]' : 'left-1'}`} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </section>
 
