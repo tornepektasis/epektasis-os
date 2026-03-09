@@ -43,7 +43,7 @@ const INITIAL_JOURNALS = [
 const INITIAL_ENTRIES = [
   {
     id: 'e1',
-    journalId: 'j1',
+    journalIds: ['j1', 'j3'], // Example of multiple journals
     title: 'Designing the Future',
     content: '<p>It is February 2026. The shift towards agentic workflows has completely redefined how we interact with personal data. <span style="background-color: #fef08a;"><b>Epektasis</b> is becoming the core of my digital reflection...</span></p><ul><li>Faster processing</li><li>Deeper insights</li></ul>',
     createdAt: new Date('2026-02-28T10:30:00'),
@@ -53,7 +53,7 @@ const INITIAL_ENTRIES = [
   },
   {
     id: 'e2',
-    journalId: 'j1',
+    journalIds: ['j1'],
     title: 'Winter Reflections',
     content: '<p>The clarity of a cold morning. Looking back at the start of the year, progress on the semantic search engine has been exponential.</p>',
     createdAt: new Date('2026-02-15T09:15:00'),
@@ -162,7 +162,7 @@ const RichTextEditor = ({ content, onChange, onShowMessage, accessToken, folderI
         selection.addRange(savedRange.current);
       }
     }
-  };
+  }
 
   // Smart Quotes Interceptor
   const handleKeyDown = (e) => {
@@ -600,7 +600,16 @@ const App = () => {
   const [entries, setEntries] = useState(() => {
     const saved = localStorage.getItem('epektasis_entries');
     if (saved) {
-      return JSON.parse(saved, (key, value) => key === 'createdAt' ? new Date(value) : value);
+      const parsed = JSON.parse(saved, (key, value) => key === 'createdAt' ? new Date(value) : value);
+      // Auto-migrate legacy entries to multi-journal architecture
+      return parsed.map(e => {
+        if (e.journalId && !e.journalIds) {
+          const newE = { ...e, journalIds: [e.journalId] };
+          delete newE.journalId;
+          return newE;
+        }
+        return e;
+      });
     }
     return INITIAL_ENTRIES;
   });
@@ -648,6 +657,7 @@ const App = () => {
   const [modalConfig, setModalConfig] = useState(null);
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
   const [isMoodMenuOpen, setIsMoodMenuOpen] = useState(false);
+  const [isJournalMenuOpen, setIsJournalMenuOpen] = useState(false);
   
   // Cloud Sync State
   const [googleClientId, setGoogleClientId] = useState(() => localStorage.getItem('epektasis_gclient') || '');
@@ -662,6 +672,7 @@ const App = () => {
   
   const moreMenuRef = useRef(null);
   const moodMenuRef = useRef(null);
+  const journalMenuRef = useRef(null);
   const syncTimeoutRef = useRef(null);
 
   useEffect(() => {
@@ -718,6 +729,7 @@ const App = () => {
     const handleClickOutside = (event) => {
       if (moreMenuRef.current && !moreMenuRef.current.contains(event.target)) setIsMoreMenuOpen(false);
       if (moodMenuRef.current && !moodMenuRef.current.contains(event.target)) setIsMoodMenuOpen(false);
+      if (journalMenuRef.current && !journalMenuRef.current.contains(event.target)) setIsJournalMenuOpen(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -755,7 +767,7 @@ const App = () => {
   const filteredEntries = useMemo(() => {
     return entries.filter(e => {
       if (activeView === 'bookmarks' && !e.isBookmarked) return false;
-      const matchesJournal = (activeJournal && activeView !== 'bookmarks') ? e.journalId === activeJournal.id : true;
+      const matchesJournal = (activeJournal && activeView !== 'bookmarks') ? (e.journalIds && e.journalIds.includes(activeJournal.id)) : true;
       const lowerQuery = searchQuery.toLowerCase();
       const matchesSearch = e.title.toLowerCase().includes(lowerQuery) || 
                             e.content.toLowerCase().includes(lowerQuery) ||
@@ -779,7 +791,7 @@ const App = () => {
     const targetJournalId = activeJournal ? activeJournal.id : (journals[0]?.id || 'j1');
     const newEntry = {
       id: `e-${Date.now()}`,
-      journalId: targetJournalId,
+      journalIds: [targetJournalId],
       title: '',
       content: '',
       createdAt: new Date(),
@@ -875,9 +887,10 @@ const App = () => {
       return;
     }
     setModalConfig({
-      type: 'confirm', title: 'Delete Journal', message: `Are you sure you want to delete "${activeJournal?.name}" and all of its associated entries? This action cannot be undone.`, confirmText: 'Delete', isDestructive: true,
+      type: 'confirm', title: 'Delete Journal', message: `Are you sure you want to delete "${activeJournal?.name}"? Entries that belong ONLY to this journal will be permanently deleted. Other overlapping entries will just have this journal tag removed.`, confirmText: 'Delete', isDestructive: true,
       onConfirm: async () => {
-        const entriesToDelete = entries.filter(e => e.journalId === id);
+        // Entries that belong EXCLUSIVELY to this journal get permanently wiped
+        const entriesToDelete = entries.filter(e => e.journalIds?.length === 1 && e.journalIds[0] === id);
         if (accessToken) {
           const regex = /https:\/\/lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/g;
           for (const entry of entriesToDelete) {
@@ -894,7 +907,14 @@ const App = () => {
         }
 
         const updatedJournals = journals.filter(j => j.id !== id);
-        const updatedEntries = entries.filter(e => e.journalId !== id);
+        
+        // Remove permanently deleted entries, and remove the journal ID from the remaining ones
+        let updatedEntries = entries.filter(e => !(e.journalIds?.length === 1 && e.journalIds[0] === id));
+        updatedEntries = updatedEntries.map(e => ({
+          ...e,
+          journalIds: e.journalIds?.filter(jid => jid !== id)
+        }));
+
         setJournals(updatedJournals);
         setEntries(updatedEntries);
         setActiveJournal(updatedJournals[0] || null);
@@ -1000,7 +1020,12 @@ const App = () => {
       const data = await res.json();
       
       if (data.entries) {
-        const parsedEntries = data.entries.map(e => ({ ...e, createdAt: new Date(e.createdAt) }));
+        const parsedEntries = data.entries.map(e => ({ 
+          ...e, 
+          createdAt: new Date(e.createdAt),
+          // Auto migrate cloud data if necessary
+          journalIds: e.journalIds || (e.journalId ? [e.journalId] : [])
+        }));
         setEntries(parsedEntries);
       }
       if (data.journals) setJournals(data.journals);
@@ -1289,12 +1314,16 @@ const App = () => {
                   <h3 className="font-heading text-sm font-bold uppercase tracking-widest text-zinc-400">Recent Memories</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {recentEntries.map(entry => {
-                      const journal = journals.find(j => j.id === entry.journalId);
                       return (
                         <button
                           key={entry.id}
-                          onClick={() => { setSelectedEntryId(entry.id); setActiveJournal(journal || null); setActiveView('entries'); setShowMobileDetail(true); }}
-                          // Updated Card styling for Glassmorphism/Shadow depth
+                          onClick={() => { 
+                            setSelectedEntryId(entry.id); 
+                            const matchingJournal = journals.find(j => entry.journalIds?.includes(j.id));
+                            setActiveJournal(matchingJournal || null); 
+                            setActiveView('entries'); 
+                            setShowMobileDetail(true); 
+                          }}
                           className="p-6 bg-white border border-zinc-100 rounded-3xl text-left shadow-sm hover:border-zinc-300 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ease-out group flex flex-col min-h-[160px] relative"
                         >
                           {entry.isBookmarked && (
@@ -1306,7 +1335,14 @@ const App = () => {
                             <span className="text-[10px] font-bold text-zinc-500 meta-small-caps bg-zinc-50 px-2 py-1 rounded border border-zinc-100">
                               {entry.createdAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                             </span>
-                            <div className="w-2 h-2 rounded-full shadow-sm" style={{ backgroundColor: journal?.color || 'var(--theme-primary)' }} />
+                            
+                            <div className="flex gap-1 -mr-1">
+                              {entry.journalIds?.slice(0, 3).map(jid => {
+                                const j = journals.find(x => x.id === jid);
+                                return j ? <div key={jid} className="w-2 h-2 rounded-full shadow-sm" style={{ backgroundColor: j.color }} title={j.name} /> : null;
+                              })}
+                            </div>
+
                           </div>
                           <h4 className="font-heading font-bold text-zinc-900 mb-2 line-clamp-2 group-hover:text-[color:var(--theme-accent)] transition-colors pr-6">{entry.title || 'Untitled Entry'}</h4>
                           <p className="text-sm text-zinc-500 line-clamp-2 mt-auto leading-relaxed">{entry.content ? entry.content.replace(/<[^>]+>/g, '') : 'Empty entry...'}</p>
@@ -1358,7 +1394,7 @@ const App = () => {
                           const entryOnDay = entries.find(e => e.createdAt.getDate() === day && e.createdAt.getMonth() === today.getMonth() && e.createdAt.getFullYear() === today.getFullYear());
                           if (entryOnDay) {
                             setSelectedEntryId(entryOnDay.id);
-                            const journal = journals.find(j => j.id === entryOnDay.journalId);
+                            const journal = journals.find(j => entryOnDay.journalIds?.includes(j.id));
                             setActiveJournal(journal || null);
                             setActiveView('entries');
                             setShowMobileDetail(true);
@@ -1786,6 +1822,48 @@ const App = () => {
                         <Calendar size={12} className="text-[color:var(--theme-primary)]" />
                         {selectedEntry.createdAt.toLocaleDateString(undefined, { dateStyle: 'long' })}
                       </div>
+
+                      <div className="relative" ref={journalMenuRef}>
+                        <button onClick={() => setIsJournalMenuOpen(!isJournalMenuOpen)} className="group flex items-center gap-1.5 px-3 py-1 bg-white border border-zinc-200 shadow-sm rounded-full hover:bg-zinc-50 hover:scale-105 transition-all duration-300" title="Manage Journals">
+                          <Book size={12} className="text-[color:var(--theme-primary)] group-hover:scale-110 transition-transform duration-300" />
+                          <span className="truncate max-w-[120px] font-bold text-[color:var(--theme-primary)] text-xs">
+                            {selectedEntry.journalIds?.length > 1 
+                              ? `${selectedEntry.journalIds.length} Journals` 
+                              : (journals.find(j => j.id === selectedEntry.journalIds?.[0])?.name || 'No Journal')}
+                          </span>
+                        </button>
+                        {isJournalMenuOpen && (
+                          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-white border border-zinc-200 rounded-xl shadow-xl py-2 z-50 w-56 animate-in fade-in zoom-in-95 duration-100 flex flex-col max-h-64 overflow-y-auto">
+                            <div className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400 border-b border-zinc-100 mb-1">Save to...</div>
+                            {journals.map(j => {
+                              const isSelected = selectedEntry.journalIds?.includes(j.id);
+                              return (
+                                <button 
+                                  key={j.id} 
+                                  onClick={() => {
+                                    let newIds = [...(selectedEntry.journalIds || [])];
+                                    if (isSelected) {
+                                      newIds = newIds.filter(id => id !== j.id);
+                                      if (newIds.length === 0 && journals.length > 0) newIds = [journals[0].id]; // Prevent zero
+                                    } else {
+                                      newIds.push(j.id);
+                                    }
+                                    const updated = entries.map(ent => ent.id === selectedEntry.id ? { ...ent, journalIds: newIds } : ent);
+                                    setEntries(updated);
+                                  }} 
+                                  className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between transition-colors hover:bg-zinc-50`}
+                                >
+                                  <div className="flex items-center gap-2 truncate">
+                                    <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: j.color }} />
+                                    <span className={`truncate ${isSelected ? 'font-bold text-zinc-900' : 'font-medium text-zinc-600'}`}>{j.name}</span>
+                                  </div>
+                                  {isSelected && <CheckCircle2 size={14} className="text-[color:var(--theme-primary)] shrink-0" />}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
                       
                       <div className="relative" ref={moodMenuRef}>
                         <button onClick={() => setIsMoodMenuOpen(!isMoodMenuOpen)} className="group flex items-center gap-1.5 px-3 py-1 bg-white border border-zinc-200 shadow-sm rounded-full hover:bg-zinc-50 hover:scale-105 transition-all duration-300" title="Change Mood">
@@ -1892,7 +1970,7 @@ const App = () => {
                 <button onClick={handleAddJournal} className="text-sidebar-muted hover:text-sidebar-hover transition-colors" title="Add New Journal"><Plus size={14} /></button>
               </div>
               {journals.map(j => (
-                <SidebarItem key={j.id} icon={Book} label={j.name} active={activeJournal?.id === j.id && activeView === 'entries'} onClick={() => { setActiveJournal(j); setActiveView('entries'); setArchiveFilter(null); setTagFilter(null); setShowMobileDetail(false); if(window.innerWidth < 768) setSidebarOpen(false); }} badge={entries.filter(e => e.journalId === j.id).length} />
+                <SidebarItem key={j.id} icon={Book} label={j.name} active={activeJournal?.id === j.id && activeView === 'entries'} onClick={() => { setActiveJournal(j); setActiveView('entries'); setArchiveFilter(null); setTagFilter(null); setShowMobileDetail(false); if(window.innerWidth < 768) setSidebarOpen(false); }} badge={entries.filter(e => e.journalIds?.includes(j.id)).length} />
               ))}
 
               <SectionLabel>Tags</SectionLabel>
